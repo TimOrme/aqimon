@@ -40,6 +40,6 @@ class NovaPmReader:
     def _read(self) -> AqiRead:
         ser = serial.Serial(self.usb_path)
         data = ser.read(10)
-        pmtwofive = int.from_bytes(data[2:4], byteorder='little') / 10
-        pmten = int.from_bytes(data[4:6], byteorder='little') / 10
+        pmtwofive = int.from_bytes(data[2:4], byteorder="little") / 10
+        pmten = int.from_bytes(data[4:6], byteorder="little") / 10
         return AqiRead(pmtwofive, pmten)

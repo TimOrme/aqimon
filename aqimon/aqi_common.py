@@ -1,5 +1,23 @@
-AQI = [(0, 50), (51, 100), (101, 150), (151, 200), (201, 300), (301, 400), (401-500)]
-PM_25 = [(0.0, 12.0), (12.1, 35.4), (35.5, 55.4), (55.5, 150.4), (150.5, 250.4), (250.5, 350.4), (350.5, 500.4)]
+from typing import List, Tuple
+
+AQI: List[Tuple[int, int]] = [
+    (0, 50),
+    (51, 100),
+    (101, 150),
+    (151, 200),
+    (201, 300),
+    (301, 400),
+    (401, 500),
+]
+PM_25: List[Tuple[float, float]] = [
+    (0.0, 12.0),
+    (12.1, 35.4),
+    (35.5, 55.4),
+    (55.5, 150.4),
+    (150.5, 250.4),
+    (250.5, 350.4),
+    (350.5, 500.4),
+]
 COLORS = ["green", "yellow", "orange", "red", "purple", "dark-red", "dark-red"]
 
 
@@ -21,11 +39,8 @@ def calculate_epa_aqi(pm_25_read: float) -> int:
             aqi_high = AQI[i][1]
             pm_low = pm_range[0]
             pm_high = pm_range[1]
-            epa = ((aqi_high - aqi_low) / (pm_high - pm_low)) * (pm_25_read - pm_low) + aqi_low
+            epa = ((aqi_high - aqi_low) / (pm_high - pm_low)) * (
+                pm_25_read - pm_low
+            ) + aqi_low
             return round(epa)
     return -1
-
-
-
-
-
