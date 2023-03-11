@@ -28,7 +28,7 @@ DEFAULT_CONFIG = Config(
     poll_frequency_sec=60 * 15,  # Every 15 minutes
     retention_minutes=60 * 24 * 7,  # 1 week
     reader_type="NOVAPM",
-    usb_path="/dev/usbtty0",
+    usb_path="/dev/ttyUSB0",
     usb_sleep_time_sec=5,
     sample_count_per_read=5,
 )

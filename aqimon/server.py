@@ -109,24 +109,29 @@ async def add_new_entry() -> AqiRead:
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    event_time, aqi, pm25, pm10 = await get_latest_stats(database)
-    level = aqi_common.get_level_from_pm25(pm25)
-    all_stats = await get_all_stats(database)
-    all_json = json.dumps(convert_all_to_view_dict(all_stats))
-    aqi_color = aqi_common.get_color_from_level(level)
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "reader_alive": reader_state.alive,
-            "reader_exception": reader_state.last_exception,
-            "all_log": all_json,
-            "aqi": aqi,
-            "pm25": pm25,
-            "pm10": pm10,
-            "aqi_color": aqi_color,
         },
     )
+
+
+@app.get("/api/alldata")
+async def all_data():
+    all_stats = await get_all_stats(database)
+    all_json = convert_all_to_view_dict(all_stats)
+    return all_json
+
+
+@app.get("/api/status")
+async def status():
+    return {
+        "reader_alive": reader_state.alive,
+        "reader_exception": str(reader_state.last_exception)
+        if reader_state is not None
+        else None,
+    }
 
 
 def start():

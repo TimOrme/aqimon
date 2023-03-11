@@ -15,11 +15,18 @@ class NovaPmReader:
         return self._power_saving_read()
 
     def _power_saving_read(self) -> AqiRead:
-        usb.turn_on_usb()
-        time.sleep(5)
+        try:
+            usb.turn_on_usb()
+            time.sleep(5)
+        except usb.UhubCtlNotInstalled:
+            pass
         result = self._averaged_read()
-        usb.turn_off_usb()
-        time.sleep(5)
+        try:
+            usb.turn_off_usb()
+            time.sleep(5)
+        except usb.UhubCtlNotInstalled:
+            pass
+
         return AqiRead(result.pmtwofive, result.pmten)
 
     def _averaged_read(self) -> AqiRead:

@@ -5,6 +5,7 @@
         <!-- CSS only -->
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
         <style>
             .data-header {
                 padding: .5em;
@@ -33,21 +34,25 @@
             .header-row {
                 margin-bottom: 1em;
             }
+
+            #alert-banner {
+                display: none;
+            }
         </style>
     </head>
 
     <body>
         <div class="page-header bg-light text-center h1">Tim & Julie's Kickass AQI Monitor</div>
-        <div class="alert alert-danger text-center" role="alert">
+        <div id="alert-banner" class="alert alert-danger text-center" role="alert">
             <h4 class="alert-heading">Reader Failed To Start</h4>
-            <div>{{ reader_exception }}</div>
+            <div id="alert-exception"></div>
         </div>
         <div class="header-row">
             <div class="row justify-content-md-center">
               <div class="col-lg-3">
                 <div class="container data-container">
                     <div class="row">
-                        <h1 class="col data-header text-center" style="color: white; background-color: {{ aqi_color}}">{{ aqi }}</h1>
+                        <h1 id="aqi-header" class="col data-header text-center" style="color: white; background-color: green"></h1>
                     </div>
                     <div class="row">
                         <h5 class="col data-subheader text-center">EPA PM2.5 AQI</h5>
@@ -57,7 +62,7 @@
               <div class="col-lg-3">
                 <div class="container data-container">
                     <div class="row">
-                        <h1 class="col data-header text-center" style="color: white; background-color: lightblue">{{ pm25 }}</h1>
+                        <h1 id="pm25-header" class="col data-header text-center" style="color: white; background-color: lightblue"></h1>
                     </div>
                     <div class="row">
                         <h5 class="col data-subheader text-center">Raw PM2.5</h5>
@@ -68,7 +73,7 @@
               <div class="col-lg-3">
                 <div class="container data-container">
                     <div class="row">
-                        <h1 class="col data-header text-center" style="color: white; background-color:  lightblue">{{ pm10 }}</h1>
+                        <h1 id="pm10-header" class="col data-header text-center" style="color: white; background-color:  lightblue"></h1>
                     </div>
                     <div class="row">
                         <h5 class="col data-subheader text-center">Raw PM10</h5>
@@ -79,63 +84,71 @@
         </div>
 
         <div class="row justify-content-md-center">
-             <div class="col-lg-3">
+             <div class="col-lg-8">
                 <div class="card">
-                    <canvas id="AQI-line-chart" width="800" height="1000"></canvas>
-                </div>
-             </div>
-             <div class="col-lg-3">
-                <div class="card">
-                    <canvas id="PM25-line-chart" width="800" height="1000"></canvas>
-                </div>
-             </div>
-             <div class="col-lg-3">
-                <div class="card">
-                    <canvas id="PM10-line-chart" width="800" height="1000"></canvas>
+                    <canvas id="AQI-line-chart" width="800" height="400"></canvas>
                 </div>
              </div>
         </div>
 
          <script>
-            var data = {{ all_log|safe }};
-            new Chart(document.getElementById("AQI-line-chart"), {
+            var aqichart = new Chart(document.getElementById("AQI-line-chart"), {
                 type: 'line',
                 data: {
-                    labels : data["t"],
+                    labels : [],
                     datasets : [{
-                        data : data["epa"],
+                        data : [],
                         label : "AQI",
                         borderColor: "#3e95cd",
                         fill: false
-                    }]
-                }
-            });
-
-            new Chart(document.getElementById("PM25-line-chart"), {
-                type: 'line',
-                data: {
-                    labels: data["t"],
-                    datasets: [{
-                        data: data["pm25"],
-                        label: "PM2.5",
+                    },
+                    {
+                        data : [],
+                        label : "PM2.5",
                         borderColor: "#8e5ea2",
                         fill: false
-                    }]
-                }
-            });
-
-            new Chart(document.getElementById("PM10-line-chart"), {
-                type: 'line',
-                data: {
-                    labels : data["t"],
-                    datasets : [{
-                        data : data["pm10"],
+                    },
+                    {
+                        data : [],
                         label : "PM10",
                         borderColor: "#c45850",
                         fill: false
                     }]
                 }
             });
+
+            function pollForStatus(){
+                $.getJSON('api/status', function(data) {
+                    if(data.reader_alive === false){
+                        $("#alert-banner").show();
+                        $("#alert-exception").text(data.reader_exception);
+                    }
+                    setTimeout(pollForStatus,5000);
+                });
+            }
+
+            pollForStatus();
+
+            function pollForData(){
+                $.getJSON('api/alldata', function(data) {
+                    aqichart.data.labels = data.t;
+
+                    aqichart.data.datasets[0].data = data.epa;
+                    aqichart.data.datasets[1].data = data.pm25;
+                    aqichart.data.datasets[2].data = data.pm10;
+
+                    // re-render the chart
+                    aqichart.update();
+
+                    $("#aqi-header").text(data.epa[data.epa.length - 1]);
+                    $("#pm25-header").text(data.pm25[data.pm25.length - 1]);
+                    $("#pm10-header").text(data.pm10[data.pm10.length - 1]);
+
+                    setTimeout(pollForData,15000);
+                });
+            }
+
+            pollForData();
 
         </script>
     </body>
