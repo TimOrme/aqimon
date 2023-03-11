@@ -1,0 +1,143 @@
+<html>
+
+    <head>
+        <title>AQI Reading</title>
+        <!-- CSS only -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.bundle.js"></script>
+        <style>
+            .data-header {
+                padding: .5em;
+                margin: 0;
+            }
+
+            .data-subheader {
+                color: darkblue;
+                background-color: lightgray;
+                padding: .25em;
+                margin: 0;
+            }
+
+            .data-container {
+                background-clip: border-box;
+                border: 1px solid darkgray;
+                border-radius: .25rem;
+            }
+
+            .page-header {
+                padding: .25em;
+                margin-bottom: .5em;
+                border-bottom: 1px solid darkgray;
+            }
+
+            .header-row {
+                margin-bottom: 1em;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="page-header bg-light text-center h1">Tim & Julie's Kickass AQI Monitor</div>
+        <div class="alert alert-danger text-center" role="alert">
+            <h4 class="alert-heading">Reader Failed To Start</h4>
+            <div>{{ reader_exception }}</div>
+        </div>
+        <div class="header-row">
+            <div class="row justify-content-md-center">
+              <div class="col-lg-3">
+                <div class="container data-container">
+                    <div class="row">
+                        <h1 class="col data-header text-center" style="color: white; background-color: {{ aqi_color}}">{{ aqi }}</h1>
+                    </div>
+                    <div class="row">
+                        <h5 class="col data-subheader text-center">EPA PM2.5 AQI</h5>
+                    </div>
+                </div>
+              </div>
+              <div class="col-lg-3">
+                <div class="container data-container">
+                    <div class="row">
+                        <h1 class="col data-header text-center" style="color: white; background-color: lightblue">{{ pm25 }}</h1>
+                    </div>
+                    <div class="row">
+                        <h5 class="col data-subheader text-center">Raw PM2.5</h5>
+                    </div>
+                </div>
+              </div>
+
+              <div class="col-lg-3">
+                <div class="container data-container">
+                    <div class="row">
+                        <h1 class="col data-header text-center" style="color: white; background-color:  lightblue">{{ pm10 }}</h1>
+                    </div>
+                    <div class="row">
+                        <h5 class="col data-subheader text-center">Raw PM10</h5>
+                    </div>
+                </div>
+              </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-md-center">
+             <div class="col-lg-3">
+                <div class="card">
+                    <canvas id="AQI-line-chart" width="800" height="1000"></canvas>
+                </div>
+             </div>
+             <div class="col-lg-3">
+                <div class="card">
+                    <canvas id="PM25-line-chart" width="800" height="1000"></canvas>
+                </div>
+             </div>
+             <div class="col-lg-3">
+                <div class="card">
+                    <canvas id="PM10-line-chart" width="800" height="1000"></canvas>
+                </div>
+             </div>
+        </div>
+
+         <script>
+            var data = {{ all_log|safe }};
+            new Chart(document.getElementById("AQI-line-chart"), {
+                type: 'line',
+                data: {
+                    labels : data["t"],
+                    datasets : [{
+                        data : data["epa"],
+                        label : "AQI",
+                        borderColor: "#3e95cd",
+                        fill: false
+                    }]
+                }
+            });
+
+            new Chart(document.getElementById("PM25-line-chart"), {
+                type: 'line',
+                data: {
+                    labels: data["t"],
+                    datasets: [{
+                        data: data["pm25"],
+                        label: "PM2.5",
+                        borderColor: "#8e5ea2",
+                        fill: false
+                    }]
+                }
+            });
+
+            new Chart(document.getElementById("PM10-line-chart"), {
+                type: 'line',
+                data: {
+                    labels : data["t"],
+                    datasets : [{
+                        data : data["pm10"],
+                        label : "PM10",
+                        borderColor: "#c45850",
+                        fill: false
+                    }]
+                }
+            });
+
+        </script>
+    </body>
+
+</html>

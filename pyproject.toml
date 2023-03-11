@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "aqimon"
+version = "0.1.0"
+description = "Air Quality Index Monitor"
+authors = ["Tim Orme"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.92.0"
+pyserial = "^3.5"
+uvicorn = "^0.21.0"
+databases = {extras = ["aiosqlite"], version = "^0.7.0"}
+jinja2 = "^3.1.2"
+fastapi-utils = "^0.2.1"
+pyserde = {extras = ["toml"], version = "^0.10.2"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+aqimon = "aqimon.server:start"
