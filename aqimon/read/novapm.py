@@ -1,5 +1,5 @@
 from aqimon import usb
-from . import AqiRead
+from . import AqiRead, ReaderState, ReaderStatus
 import asyncio
 import serial
 from statistics import mean
@@ -10,9 +10,20 @@ class NovaPmReader:
         self.usb_path = usb_path
         self.iterations = iterations
         self.sleep_time = sleep_time
+        self.state = ReaderState(ReaderStatus.IDLE, None)
 
     async def read(self) -> AqiRead:
-        return await self._power_saving_read()
+        try:
+            self.state = ReaderState(ReaderStatus.READING, None)
+            result = await self._power_saving_read()
+            self.state = ReaderState(ReaderStatus.IDLE, None)
+            return result
+        except Exception as e:
+            self.state = ReaderState(ReaderStatus.ERRORING, e)
+            raise e
+
+    def get_state(self) -> ReaderState:
+        return self.state
 
     async def _power_saving_read(self) -> AqiRead:
         try:

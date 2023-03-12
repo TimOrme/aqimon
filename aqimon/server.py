@@ -1,4 +1,3 @@
-import json
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
@@ -9,13 +8,12 @@ import databases
 from pathlib import Path
 from datetime import datetime
 from .database import (
-    get_latest_stats,
     get_all_stats,
     add_entry,
     create_tables,
     clean_old,
 )
-from .read import AqiRead, Reader, ReaderState
+from .read import AqiRead, Reader, ReaderStatus
 from .read.mock import MockReader
 from .read.novapm import NovaPmReader
 from . import aqi_common
@@ -51,7 +49,6 @@ def _get_reader(conf: Config) -> Reader:
 
 
 reader = _get_reader(config)
-reader_state = ReaderState(False, None)
 
 
 @app.on_event("startup")
@@ -63,22 +60,17 @@ async def database_connect():
 @app.on_event("startup")
 @repeat_every(seconds=5)
 async def read_from_device() -> None:
-    global reader_state
-    try:
-        result: AqiRead = await reader.read()
-        event_time = datetime.now()
-        epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
-        await add_entry(
-            dbconn=database,
-            event_time=event_time,
-            epa_aqi_pm25=epa_aqi_pm25,
-            raw_pm25=result.pmtwofive,
-            raw_pm10=result.pmten,
-        )
-        await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
-        reader_state = ReaderState(True, None)
-    except Exception as e:
-        reader_state = ReaderState(False, e)
+    result: AqiRead = await reader.read()
+    event_time = datetime.now()
+    epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
+    await add_entry(
+        dbconn=database,
+        event_time=event_time,
+        epa_aqi_pm25=epa_aqi_pm25,
+        raw_pm25=result.pmtwofive,
+        raw_pm10=result.pmten,
+    )
+    await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
 
 
 @app.on_event("shutdown")
@@ -134,12 +126,14 @@ async def all_data():
 @app.get("/api/status")
 async def status():
     return {
-        "reader_alive": reader_state.alive,
-        "reader_exception": str(reader_state.last_exception)
-        if reader_state is not None
-        else None,
+        "reader_alive": reader.get_state().status != ReaderStatus.ERRORING,
+        "reader_exception": str(reader.get_state().last_exception),
     }
 
 
 def start():
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+def debug():
+    uvicorn.run("aqimon.server:app", host="0.0.0.0", port=8000, reload=True)
