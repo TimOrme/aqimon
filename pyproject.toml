@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aqimon"
-version = "0.1.5"
+version = "0.1.6"
 description = "Air Quality Index Monitor"
 authors = ["Tim Orme"]
 readme = "README.md"
