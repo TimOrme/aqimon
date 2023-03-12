@@ -2,7 +2,6 @@ from aqimon import usb
 from . import AqiRead
 import asyncio
 import serial
-import time
 from statistics import mean
 
 
@@ -21,7 +20,7 @@ class NovaPmReader:
             await asyncio.sleep(5)
         except usb.UhubCtlNotInstalled:
             pass
-        result = self._averaged_read()
+        result = await self._averaged_read()
         try:
             await usb.turn_off_usb()
             await asyncio.sleep(5)
@@ -30,7 +29,7 @@ class NovaPmReader:
 
         return AqiRead(result.pmtwofive, result.pmten)
 
-    def _averaged_read(self) -> AqiRead:
+    async def _averaged_read(self) -> AqiRead:
         pm25_reads = []
         pm10_reads = []
 
@@ -38,7 +37,7 @@ class NovaPmReader:
             data = self._read()
             pm25_reads.append(data.pmtwofive)
             pm10_reads.append(data.pmten)
-            time.sleep(self.sleep_time)
+            await asyncio.sleep(self.sleep_time)
 
         avg_pm25 = mean(pm25_reads)
         avg_pm10 = mean(pm10_reads)
