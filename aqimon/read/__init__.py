@@ -9,7 +9,7 @@ class AqiRead:
 
 
 class Reader(Protocol):
-    def read(self) -> AqiRead:
+    async def read(self) -> AqiRead:
         pass
 
 

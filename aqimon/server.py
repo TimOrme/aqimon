@@ -65,7 +65,7 @@ async def database_connect():
 async def read_from_device() -> None:
     global reader_state
     try:
-        result: AqiRead = reader.read()
+        result: AqiRead = await reader.read()
         event_time = datetime.now()
         epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
         await add_entry(
@@ -102,7 +102,7 @@ def convert_all_to_view_dict(results):
 
 @app.post("/add")
 async def add_new_entry() -> AqiRead:
-    data = reader.read()
+    data = await reader.read()
     epa_aqi_pm25 = aqi_common.calculate_epa_aqi(data.pmtwofive)
     await add_entry(
         dbconn=database,
