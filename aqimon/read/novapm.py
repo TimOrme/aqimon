@@ -17,13 +17,13 @@ class NovaPmReader:
 
     async def _power_saving_read(self) -> AqiRead:
         try:
-            usb.turn_on_usb()
+            await usb.turn_on_usb()
             await asyncio.sleep(5)
         except usb.UhubCtlNotInstalled:
             pass
         result = self._averaged_read()
         try:
-            usb.turn_off_usb()
+            await usb.turn_off_usb()
             await asyncio.sleep(5)
         except usb.UhubCtlNotInstalled:
             pass
