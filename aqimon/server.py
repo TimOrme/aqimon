@@ -23,11 +23,18 @@ from .config import Config, get_config
 
 app = FastAPI()
 config = get_config(None)
-app.mount("/static", StaticFiles(directory="aqimon/static"), name="static")
+
+
+project_root = Path(__file__).parent.resolve()
+
+static_dir = project_root / "static"
+template_dir = project_root / "templates"
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 Path(config.database_path).parent.mkdir(parents=True, exist_ok=True)
 database = databases.Database(f"sqlite+aiosqlite:///{config.database_path}")
-templates = Jinja2Templates(directory="aqimon/templates")
+templates = Jinja2Templates(directory=template_dir)
 
 
 def _get_reader(conf: Config) -> Reader:
