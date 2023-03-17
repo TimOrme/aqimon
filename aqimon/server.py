@@ -3,10 +3,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_utils.tasks import repeat_every
+from starlette.responses import FileResponse
 import uvicorn
 import databases
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from .database import (
     get_all_stats,
     add_entry,
@@ -79,16 +80,7 @@ async def database_disconnect():
 
 
 def convert_all_to_view_dict(results):
-    view = {}
-    view["t"] = []
-    view["epa"] = []
-    view["pm25"] = []
-    view["pm10"] = []
-    for x in results:
-        view["t"].append(datetime.fromtimestamp(int(x[0])).strftime("%m-%d %H:%M"))
-        view["epa"].append(x[1])
-        view["pm25"].append(x[2])
-        view["pm10"].append(x[3])
+    view = [{"t": int(x[0]), "epa": x[1], "pm25": x[2], "pm10": x[3]} for x in results]
     return view
 
 
@@ -107,18 +99,20 @@ async def add_new_entry() -> AqiRead:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-        },
-    )
+async def home():
+    return FileResponse(static_dir / "index.html")
 
 
 @app.get("/api/alldata")
-async def all_data():
-    all_stats = await get_all_stats(database)
+async def all_data(window: str = "all"):
+    window_delta = None
+    if window == "hour":
+        window_delta = timedelta(hours=1)
+    elif window == "day":
+        window_delta = timedelta(days=1)
+    elif window == "week":
+        window_delta = timedelta(weeks=1)
+    all_stats = await get_all_stats(database, window_delta)
     all_json = convert_all_to_view_dict(all_stats)
     return all_json
 

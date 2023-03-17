@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-
+from typing import Optional
 import databases
 
 
@@ -13,9 +13,15 @@ async def get_latest_stats(dbconn: databases.Database):
         return 0, 0, 0, 0
 
 
-async def get_all_stats(dbconn: databases.Database):
-    result = await dbconn.fetch_all("SELECT * FROM aqi_log ORDER BY event_time ASC")
-    return result
+async def get_all_stats(dbconn: databases.Database, window_delta: Optional[timedelta]):
+    if window_delta:
+        lookback = int((datetime.now() - window_delta).timestamp())
+        return await dbconn.fetch_all(
+            "SELECT * FROM aqi_log WHERE event_time >= :lookback ORDER BY event_time ASC",
+            values={"lookback": lookback},
+        )
+    else:
+        return await dbconn.fetch_all("SELECT * FROM aqi_log ORDER BY event_time ASC")
 
 
 async def clean_old(dbconn: databases.Database, retention_minutes: int):

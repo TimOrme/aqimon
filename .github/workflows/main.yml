@@ -8,6 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - name: Setup Elm
+        uses: justgook/setup-elm@1.2.0
+      - name: Compile Elm
+        run: just build
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.16
         with:
