@@ -11,7 +11,7 @@ jobs:
       - name: Setup just
         uses: extractions/setup-just@v1
       - name: Setup Elm
-        uses: justgook/setup-elm@1.2.0
+        uses: jorelali/setup-elm@v5
       - name: Compile Elm
         run: just build
       - name: Build and publish to pypi
