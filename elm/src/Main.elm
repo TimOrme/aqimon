@@ -184,6 +184,7 @@ view model =
                             , C.series .time
                                 [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] []
                                 , C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] []
+                                , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] []
                                 ]
                                 model.allReads
                             ]
