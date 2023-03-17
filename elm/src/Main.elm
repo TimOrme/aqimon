@@ -120,10 +120,10 @@ update msg model =
                     ( { model | lastReads = getLastListItem data, allReads = data }, Cmd.none )
 
                 Err e ->
-                    let
-                        _ =
-                            Debug.log "Error" (Debug.toString e)
-                    in
+                    --let
+                    -- _ =
+                    --Debug.log "Error" (Debug.toString e)
+                    -- in
                     ( model, Cmd.none )
 
         FetchData newTime ->
