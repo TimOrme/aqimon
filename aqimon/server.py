@@ -19,6 +19,9 @@ from .read.mock import MockReader
 from .read.novapm import NovaPmReader
 from . import aqi_common
 from .config import Config, get_config
+import logging
+
+log = logging.getLogger(__name__)
 
 app = FastAPI()
 config = get_config(None)
@@ -61,17 +64,20 @@ async def database_connect():
 @app.on_event("startup")
 @repeat_every(seconds=5)
 async def read_from_device() -> None:
-    result: AqiRead = await reader.read()
-    event_time = datetime.now()
-    epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
-    await add_entry(
-        dbconn=database,
-        event_time=event_time,
-        epa_aqi_pm25=epa_aqi_pm25,
-        raw_pm25=result.pmtwofive,
-        raw_pm10=result.pmten,
-    )
-    await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
+    try:
+        result: AqiRead = await reader.read()
+        event_time = datetime.now()
+        epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
+        await add_entry(
+            dbconn=database,
+            event_time=event_time,
+            epa_aqi_pm25=epa_aqi_pm25,
+            raw_pm25=result.pmtwofive,
+            raw_pm10=result.pmten,
+        )
+        await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
+    except Exception as e:
+        log.exception("Failed to retrieve data from reader", e)
 
 
 @app.on_event("shutdown")
