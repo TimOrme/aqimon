@@ -17,6 +17,6 @@ jobs:
             # Node needed for elm-format
             node-version: 18
       - name: elm-format install
-        run: npm elm-format install
+        run: npm install elm-format
       - name: Compile Elm
         run: just check
