@@ -41,12 +41,16 @@ type WindowDuration
     | Week
 
 
+{-| State of the reader device
+-}
 type alias ReaderState =
     { status : String
     , lastException : String
     }
 
 
+{-| Read data from the device
+-}
 type alias ReadData =
     { time : Float
     , epa : Float
@@ -55,6 +59,8 @@ type alias ReadData =
     }
 
 
+{-| Core model
+-}
 type alias Model =
     { currentTime : Maybe Posix
     , readerState : ReaderState
@@ -65,6 +71,8 @@ type alias Model =
     }
 
 
+{-| Initial model state
+-}
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { currentTime = Nothing
@@ -78,6 +86,8 @@ init _ =
     )
 
 
+{-| Get read data for a given window duration.
+-}
 getData : WindowDuration -> Cmd Msg
 getData windowDuration =
     let
@@ -105,16 +115,21 @@ getData windowDuration =
 -- UPDATE
 
 
+{-| Possible update messages.
+-}
 type Msg
     = FetchData Posix
     | GotData (Result Http.Error (List ReadData))
     | ChangeWindow WindowDuration
 
 
+{-| Core update handler.
+-}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotData result ->
+            -- On Data received
             case result of
                 Ok data ->
                     ( { model | lastReads = getLastListItem data, allReads = data }, Cmd.none )
@@ -127,9 +142,11 @@ update msg model =
                     ( model, Cmd.none )
 
         FetchData newTime ->
+            -- Data requested
             ( { model | currentTime = Just newTime }, getData model.windowDuration )
 
         ChangeWindow window ->
+            -- Window duration changed
             ( { model | windowDuration = window }, Task.perform FetchData Time.now )
 
 
@@ -137,15 +154,20 @@ update msg model =
 -- SUBSCRIPTIONS
 
 
+{-| Root subscriptions.
+-}
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Time.every 5000 FetchData
 
 
 
+-- Get read data for the graph every 5 seconds.
 -- VIEW
 
 
+{-| Root view function
+-}
 view : Model -> Html Msg
 view model =
     div []
@@ -195,6 +217,8 @@ view model =
         ]
 
 
+{-| Get a button view for a window duration.
+-}
 getSelector : WindowDuration -> String -> WindowDuration -> ButtonGroup.RadioButtonItem Msg
 getSelector windowDuration textDuration currentDuration =
     ButtonGroup.radioButton
@@ -203,6 +227,8 @@ getSelector windowDuration textDuration currentDuration =
         [ text textDuration ]
 
 
+{-| Get a "big number" view for the headline.
+-}
 viewBigNumber : Float -> String -> Html Msg
 viewBigNumber value numberType =
     Grid.container [ style "background-clip" "border-box", style "border" "1px solid darkgray", style "padding" "0", style "border-radius" ".25rem" ]
@@ -233,6 +259,8 @@ viewBigNumber value numberType =
         ]
 
 
+{-| Decoder function for JSON read data
+-}
 dataDecoder : Decoder (List ReadData)
 dataDecoder =
     list
@@ -244,6 +272,8 @@ dataDecoder =
         )
 
 
+{-| Format a unix timestamp as a string like MM/DD HH:MM:SS
+-}
 formatTime : Float -> String
 formatTime time =
     let
@@ -271,6 +301,8 @@ formatTime time =
     month ++ "/" ++ day ++ " " ++ hour ++ ":" ++ minute ++ ":" ++ second
 
 
+{-| Convert a month to a string value. In this case, to a 2 digit numeric representation
+-}
 monthToString : Month -> String
 monthToString month =
     case month of
@@ -311,6 +343,17 @@ monthToString month =
             "12"
 
 
+{-| Given a list of read data, retrieve the last item from that list.
+Useful for grabbing the most recent read from the device.
+If the list is empty, a read with all 0 values is returned.
+
+getLastListItem [
+{time = 1, epa = 1, pm25 = 1, pm 10 = 1},
+{time = 2, epa = 2, pm25 = 2, pm 10 = 2},
+{time = 3, epa = 3, pm25 = 3, pm 10 = 3},
+] = [{time = 3, epa = 3, pm25 = 3, pm 10 = 3}]
+
+-}
 getLastListItem : List ReadData -> ReadData
 getLastListItem myList =
     case List.head (List.reverse myList) of
