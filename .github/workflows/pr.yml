@@ -22,7 +22,7 @@ jobs:
             # Node needed for elm-format
             node-version: 18
       - name: elm-format install
-        run: npm install elm-format
+        run: npm install -g elm-format
       - name: Install dev dependencies
         run: poetry install --only=dev
         env:
