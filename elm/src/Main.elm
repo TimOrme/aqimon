@@ -96,7 +96,7 @@ getData windowDuration =
                     "week"
     in
     Http.get
-        { url = "/api/alldata?window=" ++ stringDuration
+        { url = "/api/sensor_data?window=" ++ stringDuration
         , expect = Http.expectJson GotData dataDecoder
         }
 

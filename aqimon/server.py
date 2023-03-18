@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request
+"""Core server module."""
+from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -57,13 +58,21 @@ reader = _get_reader(config)
 
 @app.on_event("startup")
 async def database_connect():
+    """Connect to the database, and create tables on startup."""
     await database.connect()
     await create_tables(database)
+
+
+@app.on_event("shutdown")
+async def database_disconnect():
+    """Disconnect from the database on shutdown."""
+    await database.disconnect()
 
 
 @app.on_event("startup")
 @repeat_every(seconds=5)
 async def read_from_device() -> None:
+    """Background cron task to read from the device."""
     try:
         result: AqiRead = await reader.read()
         event_time = datetime.now()
@@ -80,18 +89,18 @@ async def read_from_device() -> None:
         log.exception("Failed to retrieve data from reader", e)
 
 
-@app.on_event("shutdown")
-async def database_disconnect():
-    await database.disconnect()
-
-
 def convert_all_to_view_dict(results):
+    """Convert data result to dictionary for view."""
     view = [{"t": int(x[0]), "epa": x[1], "pm25": x[2], "pm10": x[3]} for x in results]
     return view
 
 
 @app.post("/add")
 async def add_new_entry() -> AqiRead:
+    """Read from the device, and add the result to the database.
+
+    Returns the read info.
+    """
     data = await reader.read()
     epa_aqi_pm25 = aqi_common.calculate_epa_aqi(data.pmtwofive)
     await add_entry(
@@ -106,11 +115,13 @@ async def add_new_entry() -> AqiRead:
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
+    """Return the index page."""
     return FileResponse(static_dir / "index.html")
 
 
-@app.get("/api/alldata")
+@app.get("/api/sensor_data")
 async def all_data(window: str = "all"):
+    """Retrieve sensor data for the given window."""
     window_delta = None
     if window == "hour":
         window_delta = timedelta(hours=1)
@@ -125,6 +136,7 @@ async def all_data(window: str = "all"):
 
 @app.get("/api/status")
 async def status():
+    """Get the system status."""
     return {
         "reader_alive": reader.get_state().status != ReaderStatus.ERRORING,
         "reader_exception": str(reader.get_state().last_exception),
@@ -132,8 +144,10 @@ async def status():
 
 
 def start():
+    """Start the server."""
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 def debug():
+    """Start the server in debug mode, with hotswapping code."""
     uvicorn.run("aqimon.server:app", host="0.0.0.0", port=8000, reload=True)

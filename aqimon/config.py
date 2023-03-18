@@ -1,3 +1,4 @@
+"""Config module."""
 import os.path
 from typing import Optional
 from dataclasses import dataclass
@@ -11,6 +12,8 @@ DEFAULT_DB_PATH = "~/.aqimon/db.sqlite"
 @serde
 @dataclass(frozen=True)
 class Config:
+    """Config data for the application."""
+
     database_path: str
     poll_frequency_sec: int
     retention_minutes: int
@@ -35,16 +38,26 @@ DEFAULT_CONFIG = Config(
 
 
 def _load_config(path: str) -> Config:
+    """Load config data from a toml file."""
     with open(path, "r") as file:
         return from_toml(Config, file.read())
 
 
 def save_config(config: Config, path: str):
+    """Save config data to a given path as a toml file."""
     with open(path, "w") as file:
         file.write(to_toml(config))
 
 
 def get_config(passed_config_path: Optional[str]) -> Config:
+    """Get the config.
+
+    If a toml config file path is passed, it is loaded and used.
+
+    If no toml config is passed, a default config path is used, if the toml file exists.
+
+    If no toml exists in the default location, a sensible default config is loaded.
+    """
     if passed_config_path and os.path.exists(passed_config_path):
         return _load_config(passed_config_path)
     elif not passed_config_path and os.path.exists(DEFAULT_CONFIG_PATH):

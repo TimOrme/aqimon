@@ -16,6 +16,10 @@ fastapi-utils = "^0.2.1"
 pyserde = {extras = ["toml"], version = "^0.10.2"}
 
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.256"
+black = "^23.1.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -23,3 +27,11 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 aqimon = "aqimon.server:start"
 aqimond = "aqimon.server:debug"
+
+[tool.ruff]
+select = ["E", "F", "D"]
+ignore = ["D203", "D213"]
+line-length = 120
+
+[tool.black]
+line-length = 120

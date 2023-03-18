@@ -1,3 +1,7 @@
+"""Nova PM SDS011 Reader module.
+
+https://www.amazon.com/SDS011-Quality-Detection-Conditioning-Monitor/dp/B07FSDMRR5
+"""
 from aqimon import usb
 from . import AqiRead, ReaderState, ReaderStatus
 import asyncio
@@ -6,13 +10,17 @@ from statistics import mean
 
 
 class NovaPmReader:
+    """NOVA PM SDS011 Reader."""
+
     def __init__(self, usb_path: str, iterations: int = 5, sleep_time: int = 60):
+        """Create the device."""
         self.usb_path = usb_path
         self.iterations = iterations
         self.sleep_time = sleep_time
         self.state = ReaderState(ReaderStatus.IDLE, None)
 
     async def read(self) -> AqiRead:
+        """Read from the device."""
         try:
             self.state = ReaderState(ReaderStatus.READING, None)
             result = await self._power_saving_read()
@@ -23,6 +31,7 @@ class NovaPmReader:
             raise e
 
     def get_state(self) -> ReaderState:
+        """Get the current state of the reader."""
         return self.state
 
     async def _power_saving_read(self) -> AqiRead:
