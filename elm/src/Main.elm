@@ -131,7 +131,8 @@ update msg model =
         GotData result ->
             -- On Data received
             case result of
-                Ok data -> ( { model | lastReads = getLastListItem data, allReads = data }, Cmd.none )
+                Ok data ->
+                    ( { model | lastReads = getLastListItem data, allReads = data }, Cmd.none )
 
                 Err e ->
                     --let
