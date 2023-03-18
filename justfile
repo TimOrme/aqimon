@@ -6,6 +6,7 @@ build:
 lint:
     black --check .
     ruff check .
+    elm-format --validate elm/
 
 # Format code
 format:
