@@ -1,0 +1,31 @@
+name: PR Checks
+on:
+  push:
+    branches:
+      - '**'        # matches every branch
+      - '!main'    # excludes main
+
+jobs:
+  checkpr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup just
+        uses: extractions/setup-just@v1
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install poetry
+        uses: Gr1N/setup-poetry@v8
+      - uses: actions/setup-node@v3
+        with:
+            # Node needed for elm-format
+            node-version: 18
+      - name: elm-format install
+        run: npm install -g elm-format
+      - name: Install dev dependencies
+        run: poetry install --only=dev
+        env:
+          POETRY_VIRTUALENVS_CREATE: false
+      - name: Check linting
+        run: just lint
