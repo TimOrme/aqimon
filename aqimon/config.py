@@ -1,13 +1,10 @@
 """Config module."""
 import os.path
 from dataclasses import dataclass
-from serde import serde
-from serde.toml import to_toml, from_toml
 
 DEFAULT_DB_PATH = "~/.aqimon/db.sqlite"
 
 
-@serde
 @dataclass(frozen=True)
 class Config:
     """Config data for the application."""
@@ -39,18 +36,6 @@ DEFAULT_CONFIG = Config(
     server_port=8000,
     server_host="0.0.0.0",
 )
-
-
-def _load_config(path: str) -> Config:
-    """Load config data from a toml file."""
-    with open(path, "r") as file:
-        return from_toml(Config, file.read())
-
-
-def save_config(config: Config, path: str):
-    """Save config data to a given path as a toml file."""
-    with open(path, "w") as file:
-        file.write(to_toml(config))
 
 
 def get_config_from_env() -> Config:

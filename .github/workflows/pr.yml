@@ -24,7 +24,7 @@ jobs:
       - name: elm-format install
         run: npm install -g elm-format
       - name: Install dev dependencies
-        run: poetry install --only=dev
+        run: poetry install --no-root
         env:
           POETRY_VIRTUALENVS_CREATE: false
       - name: Check linting
