@@ -19,6 +19,7 @@ pyserde = {extras = ["toml"], version = "^0.10.2"}
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.0.256"
 black = "^23.1.0"
+mypy = "^1.1.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -35,3 +36,7 @@ line-length = 120
 
 [tool.black]
 line-length = 120
+
+[[tool.mypy.overrides]]
+module = "serial.*"
+ignore_missing_imports = true

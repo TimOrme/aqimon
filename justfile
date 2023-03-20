@@ -11,6 +11,7 @@ compile_elm:
 lint:
     black --check .
     ruff check .
+    mypy .
     elm-format --validate elm/
 
 # Format code

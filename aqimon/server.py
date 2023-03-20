@@ -19,13 +19,13 @@ from .read import AqiRead, Reader, ReaderStatus
 from .read.mock import MockReader
 from .read.novapm import NovaPmReader
 from . import aqi_common
-from .config import Config, get_config
+from .config import Config, get_config_from_env
 import logging
 
 log = logging.getLogger(__name__)
 
 app = FastAPI()
-config = get_config(None)
+config = get_config_from_env()
 
 
 project_root = Path(__file__).parent.resolve()
@@ -145,9 +145,11 @@ async def status():
 
 def start():
     """Start the server."""
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    env_config = get_config_from_env()
+    uvicorn.run(app, host=env_config.server_host, port=env_config.server_port)
 
 
 def debug():
     """Start the server in debug mode, with hotswapping code."""
-    uvicorn.run("aqimon.server:app", host="0.0.0.0", port=8000, reload=True)
+    env_config = get_config_from_env()
+    uvicorn.run("aqimon.server:app", host=env_config.server_host, port=env_config.server_port, reload=True)
