@@ -1,15 +1,10 @@
 """Config module."""
 import os.path
-from typing import Optional
 from dataclasses import dataclass
-from serde import serde
-from serde.toml import to_toml, from_toml
 
-DEFAULT_CONFIG_PATH = "~/.aqimon/config"
 DEFAULT_DB_PATH = "~/.aqimon/db.sqlite"
 
 
-@serde
 @dataclass(frozen=True)
 class Config:
     """Config data for the application."""
@@ -25,6 +20,10 @@ class Config:
     usb_sleep_time_sec: int
     sample_count_per_read: int
 
+    # Server properties
+    server_port: int
+    server_host: str
+
 
 DEFAULT_CONFIG = Config(
     database_path=os.path.expanduser(DEFAULT_DB_PATH),
@@ -34,33 +33,21 @@ DEFAULT_CONFIG = Config(
     usb_path="/dev/ttyUSB0",
     usb_sleep_time_sec=5,
     sample_count_per_read=5,
+    server_port=8000,
+    server_host="0.0.0.0",
 )
 
 
-def _load_config(path: str) -> Config:
-    """Load config data from a toml file."""
-    with open(path, "r") as file:
-        return from_toml(Config, file.read())
-
-
-def save_config(config: Config, path: str):
-    """Save config data to a given path as a toml file."""
-    with open(path, "w") as file:
-        file.write(to_toml(config))
-
-
-def get_config(passed_config_path: Optional[str]) -> Config:
-    """Get the config.
-
-    If a toml config file path is passed, it is loaded and used.
-
-    If no toml config is passed, a default config path is used, if the toml file exists.
-
-    If no toml exists in the default location, a sensible default config is loaded.
-    """
-    if passed_config_path and os.path.exists(passed_config_path):
-        return _load_config(passed_config_path)
-    elif not passed_config_path and os.path.exists(DEFAULT_CONFIG_PATH):
-        return _load_config(DEFAULT_CONFIG_PATH)
-    else:
-        return DEFAULT_CONFIG
+def get_config_from_env() -> Config:
+    """Get the config from environment variables."""
+    return Config(
+        database_path=os.path.expanduser(os.environ.get("AQIMON_DB_PATH", DEFAULT_CONFIG.database_path)),
+        poll_frequency_sec=int(os.environ.get("AQIMON_POLL_FREQUENCY_SEC", DEFAULT_CONFIG.poll_frequency_sec)),
+        retention_minutes=int(os.environ.get("AQIMON_RETENTION_MINUTES", DEFAULT_CONFIG.retention_minutes)),
+        reader_type=os.environ.get("AQIMON_READER_TYPE", DEFAULT_CONFIG.reader_type),
+        usb_path=os.environ.get("AQIMON_USB_PATH", DEFAULT_CONFIG.usb_path),
+        usb_sleep_time_sec=int(os.environ.get("AQIMON_USB_SLEEP_TIME_SEC", DEFAULT_CONFIG.usb_sleep_time_sec)),
+        sample_count_per_read=int(os.environ.get("AQIMON_SAMPLE_COUNT_PER_READ", DEFAULT_CONFIG.sample_count_per_read)),
+        server_port=int(os.environ.get("AQIMON_SERVER_PORT", DEFAULT_CONFIG.server_port)),
+        server_host=os.environ.get("AQIMON_SERVER_HOST", DEFAULT_CONFIG.server_host),
+    )
