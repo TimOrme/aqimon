@@ -214,16 +214,12 @@ view model =
                                 [ CA.row -- Appear as column instead of row
                                 , CA.alignLeft -- Anchor legends to the right
                                 , CA.spacing 5 -- Spacing between legends
-                                , CA.background "lightgray" -- Color background
+                                , CA.background "Azure" -- Color background
                                 , CA.border "gray" -- Add border
                                 , CA.borderWidth 1 -- Set border width
                                 , CA.htmlAttrs [ style "padding" "0px 4px" ]
                                 ]
-                                [ CA.width 30 -- Change width of legend window
-                                , CA.height 30 -- Change height of legend window
-                                , CA.fontSize 12 -- Change font size
-                                , CA.color "red" -- Change font color
-                                , CA.spacing 12 -- Change spacing between window and title
+                                [ CA.fontSize 12 -- Change font size
                                 ]
                             ]
                         ]
