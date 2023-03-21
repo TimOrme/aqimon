@@ -204,11 +204,23 @@ view model =
                             [ C.xLabels [ CA.moveDown 25, CA.withGrid, CA.rotate 60, CA.format formatTime ]
                             , C.yLabels [ CA.withGrid ]
                             , C.series .time
-                                [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] []
-                                , C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] []
-                                , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] []
+                                [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] [] |> C.named "EPA"
+                                , C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] [] |> C.named "PM2.5"
+                                , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] [] |> C.named "PM10"
                                 ]
                                 model.allReads
+                            , C.legendsAt .min
+                                .max
+                                [ CA.row -- Appear as column instead of row
+                                , CA.alignLeft -- Anchor legends to the right
+                                , CA.spacing 5 -- Spacing between legends
+                                , CA.background "Azure" -- Color background
+                                , CA.border "gray" -- Add border
+                                , CA.borderWidth 1 -- Set border width
+                                , CA.htmlAttrs [ style "padding" "0px 4px" ]
+                                ]
+                                [ CA.fontSize 12 -- Change font size
+                                ]
                             ]
                         ]
                     ]
