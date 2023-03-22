@@ -86,27 +86,32 @@ async def database_disconnect():
 
 
 @app.on_event("startup")
-@repeat_every(seconds=5)
 async def read_from_device() -> None:
     """Background cron task to read from the device."""
     config = get_config_from_env()
     database = get_database(config)
     reader = get_reader(config)
 
-    try:
-        result: AqiRead = await reader.read()
-        event_time = datetime.now()
-        epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
-        await add_entry(
-            dbconn=database,
-            event_time=event_time,
-            epa_aqi_pm25=epa_aqi_pm25,
-            raw_pm25=result.pmtwofive,
-            raw_pm10=result.pmten,
-        )
-        await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
-    except Exception as e:
-        log.exception("Failed to retrieve data from reader", e)
+    async def read_function():
+        try:
+            result: AqiRead = await reader.read()
+            event_time = datetime.now()
+            epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
+            await add_entry(
+                dbconn=database,
+                event_time=event_time,
+                epa_aqi_pm25=epa_aqi_pm25,
+                raw_pm25=result.pmtwofive,
+                raw_pm10=result.pmten,
+            )
+            await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
+        except Exception as e:
+            log.exception("Failed to retrieve data from reader", e)
+
+    # Note that we leverage the @repeat_every decorator here, but as a regular function call.  This allows us to
+    # use a non-global config object to specify the poll frequency
+    repeater = repeat_every(seconds=config.poll_frequency_sec)
+    await repeater(read_function)()
 
 
 def convert_all_to_view_dict(results):
