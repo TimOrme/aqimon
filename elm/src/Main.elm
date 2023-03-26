@@ -9,6 +9,8 @@ import Bootstrap.Text as Text
 import Browser
 import Chart as C
 import Chart.Attributes as CA
+import Chart.Events as CE
+import Chart.Item as CI
 import Html exposing (Attribute, Html, div, h1, h5, text)
 import Html.Attributes exposing (class, style)
 import Http
@@ -68,6 +70,7 @@ type alias Model =
     , allReads : List ReadData
     , windowDuration : WindowDuration
     , dataLoading : Bool
+    , hovering : List (CI.One ReadData CI.Dot)
     }
 
 
@@ -81,6 +84,7 @@ init _ =
       , allReads = []
       , windowDuration = Hour
       , dataLoading = True
+      , hovering = []
       }
     , Task.perform FetchData Time.now
     )
@@ -121,6 +125,7 @@ type Msg
     = FetchData Posix
     | GotData (Result Http.Error (List ReadData))
     | ChangeWindow WindowDuration
+    | OnHover (List (CI.One ReadData CI.Dot))
 
 
 {-| Core update handler.
@@ -148,6 +153,9 @@ update msg model =
         ChangeWindow window ->
             -- Window duration changed
             ( { model | windowDuration = window }, Task.perform FetchData Time.now )
+
+        OnHover hovering ->
+            ( { model | hovering = hovering }, Cmd.none )
 
 
 
@@ -200,15 +208,20 @@ view model =
                         [ C.chart
                             [ CA.height 300
                             , CA.width 1000
+                            , CE.onMouseMove OnHover (CE.getNearest CI.dots)
+                            , CE.onMouseLeave (OnHover [])
                             ]
                             [ C.xLabels [ CA.moveDown 25, CA.withGrid, CA.rotate 60, CA.format formatTime ]
                             , C.yLabels [ CA.withGrid ]
                             , C.series .time
-                                [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] [] |> C.named "EPA"
-                                , C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] [] |> C.named "PM2.5"
-                                , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] [] |> C.named "PM10"
+                                [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] [ CA.circle, CA.size 3 ] |> C.named "EPA"
+                                , C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] [ CA.circle, CA.size 3 ] |> C.named "PM2.5"
+                                , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] [ CA.circle, CA.size 3 ] |> C.named "PM10"
                                 ]
                                 model.allReads
+                            , C.each model.hovering <|
+                                \p item ->
+                                    [ C.tooltip item [] [] [] ]
                             , C.legendsAt .min
                                 .max
                                 [ CA.row -- Appear as column instead of row
