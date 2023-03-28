@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "aqimon"
-version = "0.2.0"
+version = "0.2.1"
 description = "Air Quality Index Monitor"
 authors = ["Tim Orme"]
 readme = "README.md"
+include = ["aqimon/static/elm.js"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
