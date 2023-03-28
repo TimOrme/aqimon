@@ -14,7 +14,7 @@ from .database import (
     create_tables,
     clean_old,
 )
-from .read import AqiRead, Reader, ReaderStatus
+from .read import AqiRead, Reader
 from .read.mock import MockReader
 from .read.novapm import NovaPmReader
 from . import aqi_common
@@ -52,12 +52,12 @@ def get_database(config: Config = Depends(get_config)) -> databases.Database:
     return databases.Database(f"sqlite+aiosqlite:///{config.database_path}")
 
 
-@lru_cache(maxsize=1)
-def get_reader(conf: Config = Depends(get_config)) -> Reader:
+def build_reader() -> Reader:
     """Retrieve the reader class.
 
     Uses LRU cache to simulate a singleton.
     """
+    conf = get_config()
     if conf.reader_type == "MOCK":
         return MockReader()
     elif conf.reader_type == "NOVAPM":
@@ -68,6 +68,18 @@ def get_reader(conf: Config = Depends(get_config)) -> Reader:
         )
     else:
         raise Exception("Invalid reader type specified")
+
+
+reader = build_reader()
+
+
+def get_reader() -> Reader:
+    """Retrieve the global reader to find state from.
+
+    TODO: Change this to not rely on global module-level state.
+    """
+    global reader
+    return reader
 
 
 @app.on_event("startup")
@@ -90,9 +102,9 @@ async def read_from_device() -> None:
     """Background cron task to read from the device."""
     config = get_config_from_env()
     database = get_database(config)
-    reader = get_reader(config)
+    reader = get_reader()
 
-    async def read_function():
+    async def read_function() -> None:
         try:
             result: AqiRead = await reader.read()
             event_time = datetime.now()
@@ -147,9 +159,10 @@ async def all_data(
 @app.get("/api/status")
 async def status(reader: Reader = Depends(get_reader)):
     """Get the system status."""
+    last_exception = reader.get_state().last_exception
     return {
-        "reader_alive": reader.get_state().status != ReaderStatus.ERRORING,
-        "reader_exception": str(reader.get_state().last_exception),
+        "reader_status": str(reader.get_state().status.name),
+        "reader_exception": str(last_exception) if last_exception else None,
     }
 
 
