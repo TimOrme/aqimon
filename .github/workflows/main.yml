@@ -13,7 +13,7 @@ jobs:
       - name: Setup Elm
         uses: jorelali/setup-elm@v5
       - name: Compile Elm
-        run: just build
+        run: just compile_elm
       - name: Build and publish to pypi
         uses: JRubics/poetry-publish@v1.16
         with:
