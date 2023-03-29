@@ -7,11 +7,9 @@ import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
 import Bootstrap.Text as Text
 import Browser
-import Chart as C
-import Chart.Attributes as CA
-import Chart.Events as CE
 import Chart.Item as CI
 import DeviceStatus as DS exposing (..)
+import Graph as G exposing (..)
 import Html exposing (Attribute, Html, div, h1, h5, text)
 import Html.Attributes exposing (class, style)
 import Http
@@ -228,37 +226,7 @@ view model =
             , Grid.row [ Row.attrs [ style "padding-top" "1em" ], Row.centerMd ]
                 [ Grid.col [ Col.lg ]
                     [ div [ style "height" "400px" ]
-                        [ C.chart
-                            [ CA.height 300
-                            , CA.width 1000
-                            , CE.onMouseMove OnHover (CE.getNearest CI.dots)
-                            , CE.onMouseLeave (OnHover [])
-                            ]
-                            [ C.xLabels [ CA.moveDown 25, CA.withGrid, CA.rotate 60, CA.format formatTime ]
-                            , C.yLabels [ CA.withGrid ]
-                            , C.series .time
-                                [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] [ CA.circle, CA.size 3 ] |> C.named "EPA"
-                                , C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] [ CA.circle, CA.size 3 ] |> C.named "PM2.5"
-                                , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] [ CA.circle, CA.size 3 ] |> C.named "PM10"
-                                ]
-                                model.allReads
-                            , C.each model.hovering <|
-                                \p item ->
-                                    [ C.tooltip item [] [] [] ]
-                            , C.legendsAt .min
-                                .max
-                                [ CA.row -- Appear as column instead of row
-                                , CA.alignLeft -- Anchor legends to the right
-                                , CA.spacing 5 -- Spacing between legends
-                                , CA.background "Azure" -- Color background
-                                , CA.border "gray" -- Add border
-                                , CA.borderWidth 1 -- Set border width
-                                , CA.htmlAttrs [ style "padding" "0px 4px" ]
-                                ]
-                                [ CA.fontSize 12 -- Change font size
-                                ]
-                            ]
-                        ]
+                        [ G.getChart { graphData = model.allReads, currentHover = model.hovering } OnHover ]
                     ]
                 ]
             ]
@@ -329,6 +297,8 @@ statusDecoder =
         (maybe (field "reader_exception" string))
 
 
+{-| JSON decoder to convert a device state to its type.
+-}
 stateDecoder : Decoder DS.DeviceState
 stateDecoder =
     string
@@ -347,77 +317,6 @@ stateDecoder =
                     _ ->
                         fail "Invalid DeviceState"
             )
-
-
-{-| Format a unix timestamp as a string like MM/DD HH:MM:SS
--}
-formatTime : Float -> String
-formatTime time =
-    let
-        milliTime =
-            Time.millisToPosix (floor time * 1000)
-
-        year =
-            String.fromInt (toYear utc milliTime)
-
-        month =
-            monthToString (toMonth utc milliTime)
-
-        day =
-            String.fromInt (toDay utc milliTime)
-
-        hour =
-            String.fromInt (toHour utc milliTime)
-
-        minute =
-            String.fromInt (toMinute utc milliTime)
-
-        second =
-            String.fromInt (toSecond utc milliTime)
-    in
-    month ++ "/" ++ day ++ " " ++ hour ++ ":" ++ minute ++ ":" ++ second
-
-
-{-| Convert a month to a string value. In this case, to a 2 digit numeric representation
--}
-monthToString : Month -> String
-monthToString month =
-    case month of
-        Jan ->
-            "01"
-
-        Feb ->
-            "02"
-
-        Mar ->
-            "03"
-
-        Apr ->
-            "04"
-
-        May ->
-            "05"
-
-        Jun ->
-            "06"
-
-        Jul ->
-            "07"
-
-        Aug ->
-            "08"
-
-        Sep ->
-            "09"
-
-        Oct ->
-            "10"
-
-        Nov ->
-            "11"
-
-        Dec ->
-            "12"
 
 
 {-| Given a list of read data, retrieve the last item from that list.
