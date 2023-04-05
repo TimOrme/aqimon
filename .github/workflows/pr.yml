@@ -4,6 +4,8 @@ on:
     branches:
       - '**'        # matches every branch
       - '!main'    # excludes main
+    pull_request:
+      types: [opened, reopened, synchronize]
 
 jobs:
   checkpr:
