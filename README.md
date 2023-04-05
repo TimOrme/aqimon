@@ -143,4 +143,3 @@ AQIMON_READER_TYPE=MOCK poetry run aqimon
 
 Master branch is locked, but you can open a PR on the repo.  Build checks must pass, and changes approved by a code
 owner, before merging.
-
