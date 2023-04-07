@@ -2,13 +2,25 @@
 
 A simple Air Quality Index monitor, designed to work on the Raspberry Pi with the SDS011 Nova PM Sensor.
 
-## Installation
+- [AQIMON](#aqimon)
+  - [Installation](#installation)
+    - [Pre-Requisites](#pre-requisites)
+    - [Install](#install)
+  - [Running Aqimon](#running-aqimon)
+    - [Configure With Systemd](#configure-with-systemd)
+  - [Configuration](#configuration)
+  - [Contributing](#contributing)
+    - [Toolset](#toolset)
+    - [Quickstart](#quickstart)
+    - [Using the Mock Reader](#using-the-mock-reader)
+    - [Submitting a PR](#submitting-a-pr)
 
+## Installation
 
 ### Pre-Requisites
 
-* Python 3.9+
-* [uhubctl](https://github.com/mvp/uhubctl) must be installed and on your PATH.
+- Python 3.9+
+- [uhubctl](https://github.com/mvp/uhubctl) must be installed and on your PATH.
 
 ### Install
 
@@ -18,7 +30,7 @@ pip install aqimon
 
 ## Running Aqimon
 
-Aqimon is a simple web server.  To start with all the defaults, you can just run:
+Aqimon is a simple web server.  To start with all the defaults (assuming available SDS011 hardware on `/dev/ttyUSB0`), you can just run:
 
 ```commandline
 aqimon
@@ -26,13 +38,15 @@ aqimon
 
 And then go to your browser at `http://{serveraddress}:8000/` to view the UI.
 
+If you don't have the requisite SDS011 hardware, you can use a mock data source via a [mock reader](#using-the-mock-reader).
+
 ### Configure With Systemd
 
 Generally, you'd want to run `Aqimon` as an always-on service, using `systemd`.
 
 To do so, create a file at `/etc/systemd/system/aqimin.service` with the following contents:
 
-```
+```text
 [Unit]
 Description=AQIMON
 After=multi-user.target
@@ -59,7 +73,7 @@ Aqimon uses environment variables for configuration, but all values should ship 
 
 | Variable                         | Default             | Description                                                                                                                       |
 |----------------------------------|---------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| **AQIMON_DB_PATH**               | ~/.aqimon/db.sqlite | The path to the database file, where read information is stored. It should be an absolute path; user home expansion is supported. | 
+| **AQIMON_DB_PATH**               | ~/.aqimon/db.sqlite | The path to the database file, where read information is stored. It should be an absolute path; user home expansion is supported. |
 | **AQIMON_POLL_FREQUENCY_SEC**    | 900 (15 minutes)    | Sets how frequently to read from the device, in seconds.                                                                          |
 | **AQIMON_RETENTION_MINUTES**     | 10080 (1 week)      | Sets how long data will be kept in the database, in minutes.                                                                      |
 | **AQIMON_READER_TYPE**           | NOVAPM              | The reader type to use, either NOVAPM or MOCK.                                                                                    |
@@ -68,7 +82,6 @@ Aqimon uses environment variables for configuration, but all values should ship 
 | **AQIMON_SAMPLE_COUNT_PER_READ** | 5                   | The number of reads to take with each sample.                                                                                     |
 | **AQIMON_SERVER_PORT**           | 8000                | The port to run the server on.                                                                                                    |
 | **AQIMON_SERVER_HOST**           | 0.0.0.0             | The host to run the server on.                                                                                                    |
- 
 
 ## Contributing
 
@@ -76,11 +89,11 @@ Aqimon uses environment variables for configuration, but all values should ship 
 
 To start developing, you'll need to install the following tools:
 
-* [Python 3.9+](https://www.python.org/) - For API Code
-* [Elm 0.19](https://elm-lang.org/) - For client code
-* [poetry](https://python-poetry.org/) - For python package management
-* [justfile](https://github.com/casey/just) - For builds
-* [elm-format](https://github.com/avh4/elm-format) - For auto-formatting elm code.
+- [Python 3.9+](https://www.python.org/) - For API Code
+- [Elm 0.19](https://elm-lang.org/) - For client code
+- [poetry](https://python-poetry.org/) - For python package management
+- [justfile](https://github.com/casey/just) - For builds
+- [elm-format](https://github.com/avh4/elm-format) - For auto-formatting elm code.
 
 Optionally, we have [pre-commit](https://pre-commit.com/) hooks available as well.  To install hooks, just run
 `pre-commit install` and then linters and autoformatting will be applied automatically on commit.
@@ -119,7 +132,7 @@ just format
 
 ### Using the Mock Reader
 
-Aqimon ships with a mock reader class that you can use in the event that you don't have a reader available on your 
+Aqimon ships with a mock reader class that you can use in the event that you don't have a reader available on your
 development computer.  The mock reader just returns randomized reads.  To use it, you can start the server like:
 
 ```commandline
@@ -128,6 +141,5 @@ AQIMON_READER_TYPE=MOCK poetry run aqimon
 
 ### Submitting a PR
 
-Master branch is locked, but you can open a PR on the repo.  Build checks must pass, and changes approved by a code 
+Master branch is locked, but you can open a PR on the repo.  Build checks must pass, and changes approved by a code
 owner, before merging.
-
