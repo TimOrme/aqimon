@@ -52,6 +52,15 @@ type alias ReadData =
     }
 
 
+{-| Hard error model. In cases where we have unexpected failures.
+-}
+type alias ErrorData =
+    { hasError : Bool
+    , errorTitle : String
+    , errorMessage : String
+    }
+
+
 {-| Core model
 -}
 type alias Model =
@@ -62,6 +71,7 @@ type alias Model =
     , windowDuration : WindowDuration
     , dataLoading : Bool
     , hovering : List (CI.One ReadData CI.Dot)
+    , errorData : ErrorData
     }
 
 
@@ -76,6 +86,7 @@ init _ =
       , windowDuration = Hour
       , dataLoading = True
       , hovering = []
+      , errorData = { hasError = False, errorTitle = "", errorMessage = "" }
       }
     , Task.perform FetchData Time.now
     )
@@ -138,14 +149,10 @@ update msg model =
             -- On Data received
             case result of
                 Ok data ->
-                    ( { model | lastReads = getLastListItem data, allReads = data }, Cmd.none )
+                    ( { model | lastReads = getLastListItem data, allReads = data, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
 
                 Err e ->
-                    --let
-                    -- _ =
-                    --Debug.log "Error" (Debug.toString e)
-                    -- in
-                    ( model, Cmd.none )
+                    ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve read data", errorMessage = errorToString e } }, Cmd.none )
 
         FetchData newTime ->
             -- Data requested
@@ -154,14 +161,10 @@ update msg model =
         GotStatus result ->
             case result of
                 Ok data ->
-                    ( { model | readerState = data }, Cmd.none )
+                    ( { model | readerState = data, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
 
                 Err e ->
-                    --let
-                    --    _ =
-                    --        Debug.log "Error" (Debug.toString e)
-                    -- in
-                    ( model, Cmd.none )
+                    ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve device status", errorMessage = errorToString e } }, Cmd.none )
 
         FetchStatus newTime ->
             -- Status Requested
@@ -207,6 +210,17 @@ view model =
                 , Grid.col [] [ DS.getDeviceInfo model.readerState ]
                 ]
             ]
+        , htmlIf
+            (Grid.container []
+                [ Grid.row []
+                    [ Grid.col [ Col.attrs [ class "alert", class "alert-danger" ] ]
+                        [ h5 [] [ text model.errorData.errorTitle ]
+                        , text model.errorData.errorMessage
+                        ]
+                    ]
+                ]
+            )
+            model.errorData.hasError
         , Grid.container []
             [ Grid.row [ Row.centerMd ]
                 [ Grid.col [ Col.lg3 ] [ viewBigNumber model.lastReads.epa "EPA" ]
@@ -338,3 +352,41 @@ getLastListItem myList =
 
         Nothing ->
             { time = 0, epa = 0, pm25 = 0, pm10 = 0 }
+
+
+{-| Convert HTTP error to a string.
+-}
+errorToString : Http.Error -> String
+errorToString error =
+    case error of
+        Http.BadUrl url ->
+            "The URL " ++ url ++ " was invalid"
+
+        Http.Timeout ->
+            "Unable to reach the server, try again"
+
+        Http.NetworkError ->
+            "Unable to reach the server, check your network connection"
+
+        Http.BadStatus 500 ->
+            "The server had a problem, try again later"
+
+        Http.BadStatus 400 ->
+            "Verify your information and try again"
+
+        Http.BadStatus _ ->
+            "Unknown error"
+
+        Http.BadBody errorMessage ->
+            errorMessage
+
+
+{-| Conditionally display some block of HTML
+-}
+htmlIf : Html msg -> Bool -> Html msg
+htmlIf el cond =
+    if cond then
+        el
+
+    else
+        text ""
