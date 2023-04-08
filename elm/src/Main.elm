@@ -354,6 +354,8 @@ getLastListItem myList =
             { time = 0, epa = 0, pm25 = 0, pm10 = 0 }
 
 
+{-| Convert HTTP error to a string.
+-}
 errorToString : Http.Error -> String
 errorToString error =
     case error of
@@ -379,6 +381,8 @@ errorToString error =
             errorMessage
 
 
+{-| Conditionally display some block of HTML
+-}
 htmlIf : Html msg -> Bool -> Html msg
 htmlIf el cond =
     if cond then
