@@ -453,15 +453,9 @@ shouldFetchStatus model currentTime =
         timeToNextRead =
             Maybe.map2 getDuration model.readerState.nextSchedule (Just currentTime) |> Maybe.withDefault 1
     in
-    model.readerState.state
-        == Reading
-        -- Reader state is active, we always want to see when it finishes ASAP.
-        || timeSinceLastPoll
-        > maxTimeBetweenPolls
+    -- Reader state is active, we always want to see when it finishes ASAP.
+    (model.readerState.state == Reading)
         -- We're overdue for a poll
-        || timeToNextRead
-        > -1
-
-
-
--- We're overdue for a read
+        || (timeSinceLastPoll > maxTimeBetweenPolls)
+        -- We're overdue for a read
+        || (timeToNextRead > -1)
