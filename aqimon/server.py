@@ -21,6 +21,8 @@ from . import aqi_common
 from .config import Config, get_config_from_env
 import logging
 from functools import lru_cache
+from dataclasses import dataclass
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +31,14 @@ app = FastAPI()
 project_root = Path(__file__).parent.resolve()
 static_dir = project_root / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@dataclass
+class ScheduledReader:
+    """Simple state wrapper to track reader, and next schedule time."""
+
+    next_schedule: Optional[datetime]
+    reader: Reader
 
 
 @lru_cache(maxsize=1)
@@ -52,19 +62,22 @@ def get_database(config: Config = Depends(get_config)) -> databases.Database:
     return databases.Database(f"sqlite+aiosqlite:///{config.database_path}")
 
 
-def build_reader() -> Reader:
+def build_reader() -> ScheduledReader:
     """Retrieve the reader class.
 
     Uses LRU cache to simulate a singleton.
     """
     conf = get_config()
     if conf.reader_type == "MOCK":
-        return MockReader()
+        return ScheduledReader(None, MockReader())
     elif conf.reader_type == "NOVAPM":
-        return NovaPmReader(
-            usb_path=conf.usb_path,
-            iterations=conf.sample_count_per_read,
-            sleep_time=conf.usb_sleep_time_sec,
+        return ScheduledReader(
+            None,
+            NovaPmReader(
+                usb_path=conf.usb_path,
+                iterations=conf.sample_count_per_read,
+                sleep_time=conf.usb_sleep_time_sec,
+            ),
         )
     else:
         raise Exception("Invalid reader type specified")
@@ -73,7 +86,7 @@ def build_reader() -> Reader:
 reader = build_reader()
 
 
-def get_reader() -> Reader:
+def get_reader() -> ScheduledReader:
     """Retrieve the global reader to find state from.
 
     TODO: Change this to not rely on global module-level state.
@@ -102,11 +115,13 @@ async def read_from_device() -> None:
     """Background cron task to read from the device."""
     config = get_config_from_env()
     database = get_database(config)
-    reader = get_reader()
+    scheduled_reader = get_reader()
 
     async def read_function() -> None:
         try:
-            result: AqiRead = await reader.read()
+            # Set the approximate time of the next read
+            scheduled_reader.next_schedule = datetime.now() + timedelta(seconds=config.poll_frequency_sec)
+            result: AqiRead = await scheduled_reader.reader.read()
             event_time = datetime.now()
             epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
             await add_entry(
@@ -157,12 +172,14 @@ async def all_data(
 
 
 @app.get("/api/status")
-async def status(reader: Reader = Depends(get_reader)):
+async def status(reader: ScheduledReader = Depends(get_reader)):
     """Get the system status."""
-    last_exception = reader.get_state().last_exception
+    last_exception = reader.reader.get_state().last_exception
+
     return {
-        "reader_status": str(reader.get_state().status.name),
+        "reader_status": str(reader.reader.get_state().status.name),
         "reader_exception": str(last_exception) if last_exception else None,
+        "next_schedule": int(reader.next_schedule.timestamp() * 1000) if reader.next_schedule else None,
     }
 
 
