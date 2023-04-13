@@ -8,7 +8,6 @@ import Bootstrap.Grid.Row as Row
 import Bootstrap.Text as Text
 import Browser
 import Chart.Item as CI
-import Debug
 import DeviceStatus as DS exposing (..)
 import Graph as G exposing (..)
 import Html exposing (Attribute, Html, div, h1, h5, text)
