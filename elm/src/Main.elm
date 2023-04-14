@@ -13,7 +13,7 @@ import Graph as G exposing (..)
 import Html exposing (Attribute, Html, div, h1, h5, text)
 import Html.Attributes exposing (class, style)
 import Http
-import Json.Decode exposing (Decoder, andThen, fail, field, float, list, map2, map4, maybe, string, succeed)
+import Json.Decode exposing (Decoder, andThen, fail, field, float, int, list, map3, map4, maybe, string, succeed)
 import Task
 import Time exposing (..)
 
@@ -65,6 +65,7 @@ type alias ErrorData =
 -}
 type alias Model =
     { currentTime : Maybe Posix
+    , lastStatusPoll : Maybe Posix
     , readerState : DeviceInfo
     , lastReads : ReadData
     , allReads : List ReadData
@@ -80,7 +81,8 @@ type alias Model =
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { currentTime = Nothing
-      , readerState = { state = Idle, lastException = Nothing }
+      , lastStatusPoll = Nothing
+      , readerState = { state = Idle, lastException = Nothing, currentTime = Nothing, nextSchedule = Nothing }
       , lastReads = { time = 0, epa = 0, pm25 = 0.0, pm10 = 0.0 }
       , allReads = []
       , windowDuration = Hour
@@ -135,9 +137,10 @@ type Msg
     = FetchData Posix
     | FetchStatus Posix
     | GotData (Result Http.Error (List ReadData))
-    | GotStatus (Result Http.Error DS.DeviceInfo)
+    | GotStatus (Result Http.Error DeviceInfoResponse)
     | ChangeWindow WindowDuration
     | OnHover (List (CI.One ReadData CI.Dot))
+    | Tick Posix
 
 
 {-| Core update handler.
@@ -161,14 +164,22 @@ update msg model =
         GotStatus result ->
             case result of
                 Ok data ->
-                    ( { model | readerState = data, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
+                    let
+                        deviceInfo =
+                            { state = data.readerStatus
+                            , lastException = data.readerException
+                            , currentTime = model.currentTime
+                            , nextSchedule = Maybe.map Time.millisToPosix data.nextSchedule
+                            }
+                    in
+                    ( { model | readerState = deviceInfo, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
 
                 Err e ->
                     ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve device status", errorMessage = errorToString e } }, Cmd.none )
 
         FetchStatus newTime ->
             -- Status Requested
-            ( { model | currentTime = Just newTime }, getStatus )
+            ( { model | currentTime = Just newTime, lastStatusPoll = Just newTime }, getStatus )
 
         ChangeWindow window ->
             -- Window duration changed
@@ -176,6 +187,23 @@ update msg model =
 
         OnHover hovering ->
             ( { model | hovering = hovering }, Cmd.none )
+
+        Tick newTime ->
+            let
+                readerState =
+                    model.readerState
+
+                updatedReaderState =
+                    { readerState | currentTime = Just newTime }
+
+                cmd =
+                    if shouldFetchStatus model newTime then
+                        Task.perform FetchStatus Time.now
+
+                    else
+                        Cmd.none
+            in
+            ( { model | currentTime = Just newTime, readerState = updatedReaderState }, cmd )
 
 
 
@@ -186,7 +214,7 @@ update msg model =
 -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch [ Time.every 5000 FetchData, Time.every 5000 FetchStatus ]
+    Sub.batch [ Time.every 5000 FetchData, Time.every 500 Tick ]
 
 
 
@@ -302,13 +330,21 @@ dataDecoder =
         )
 
 
+type alias DeviceInfoResponse =
+    { readerStatus : DS.DeviceState
+    , readerException : Maybe String
+    , nextSchedule : Maybe Int
+    }
+
+
 {-| Decoder function for JSON status data
 -}
-statusDecoder : Decoder DS.DeviceInfo
+statusDecoder : Decoder DeviceInfoResponse
 statusDecoder =
-    map2 DS.DeviceInfo
+    map3 DeviceInfoResponse
         (field "reader_status" stateDecoder)
         (maybe (field "reader_exception" string))
+        (maybe (field "next_schedule" int))
 
 
 {-| JSON decoder to convert a device state to its type.
@@ -390,3 +426,36 @@ htmlIf el cond =
 
     else
         text ""
+
+
+{-| Format a unix timestamp as a string like MM/DD HH:MM:SS
+-}
+getDuration : Posix -> Posix -> Int
+getDuration currentTime scheduledTime =
+    let
+        durationMillis =
+            posixToMillis scheduledTime - posixToMillis currentTime
+    in
+    durationMillis
+
+
+{-| Determine if we should fetch device status.
+-}
+shouldFetchStatus : Model -> Posix -> Bool
+shouldFetchStatus model currentTime =
+    let
+        maxTimeBetweenPolls =
+            15000
+
+        timeSinceLastPoll =
+            Maybe.map2 getDuration model.lastStatusPoll (Just currentTime) |> Maybe.withDefault (maxTimeBetweenPolls + 1)
+
+        timeToNextRead =
+            Maybe.map2 getDuration model.readerState.nextSchedule (Just currentTime) |> Maybe.withDefault 1
+    in
+    -- Reader state is active, we always want to see when it finishes ASAP.
+    (model.readerState.state == Reading)
+        -- We're overdue for a poll
+        || (timeSinceLastPoll > maxTimeBetweenPolls)
+        -- We're overdue for a read
+        || (timeToNextRead > -1)
