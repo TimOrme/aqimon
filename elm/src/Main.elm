@@ -10,10 +10,10 @@ import Browser
 import Chart.Item as CI
 import DeviceStatus as DS exposing (..)
 import Graph as G exposing (..)
-import Html exposing (Attribute, Html, div, h1, h5, text)
+import Html exposing (Attribute, Html, div, h1, h2, h5, text)
 import Html.Attributes exposing (class, style)
 import Http
-import Json.Decode exposing (Decoder, andThen, fail, field, float, int, list, map3, map4, maybe, string, succeed)
+import Json.Decode exposing (Decoder, andThen, fail, field, float, int, list, map2, map3, map4, maybe, string, succeed)
 import Task
 import Time exposing (..)
 
@@ -42,13 +42,39 @@ type WindowDuration
     | Week
 
 
+{-| Lastest data point
+-}
+type alias LatestData =
+    { readTime : Float
+    , pm25 : Float
+    , pm10 : Float
+    , epaTime : Float
+    , epa : Float
+    }
+
+
 {-| Read data from the device
 -}
 type alias ReadData =
     { time : Float
-    , epa : Float
     , pm25 : Float
     , pm10 : Float
+    }
+
+
+{-| EPA AQI data
+-}
+type alias EpaData =
+    { time : Float
+    , epa : Float
+    }
+
+
+{-| All data wrapper
+-}
+type alias AllData =
+    { reads : List ReadData
+    , epas : List EpaData
     }
 
 
@@ -67,11 +93,13 @@ type alias Model =
     { currentTime : Maybe Posix
     , lastStatusPoll : Maybe Posix
     , readerState : DeviceInfo
-    , lastReads : ReadData
+    , lastReads : LatestData
     , allReads : List ReadData
+    , allEpas : List EpaData
     , windowDuration : WindowDuration
     , dataLoading : Bool
-    , hovering : List (CI.One ReadData CI.Dot)
+    , hoveringReads : List (CI.One ReadData CI.Dot)
+    , hoveringEpas : List (CI.One EpaData CI.Dot)
     , errorData : ErrorData
     }
 
@@ -83,11 +111,13 @@ init _ =
     ( { currentTime = Nothing
       , lastStatusPoll = Nothing
       , readerState = { state = Idle, lastException = Nothing, currentTime = Nothing, nextSchedule = Nothing }
-      , lastReads = { time = 0, epa = 0, pm25 = 0.0, pm10 = 0.0 }
+      , lastReads = { readTime = 0, pm25 = 0.0, pm10 = 0.0, epaTime = 0, epa = 0.0 }
       , allReads = []
+      , allEpas = []
       , windowDuration = Hour
       , dataLoading = True
-      , hovering = []
+      , hoveringReads = []
+      , hoveringEpas = []
       , errorData = { hasError = False, errorTitle = "", errorMessage = "" }
       }
     , Task.perform FetchData Time.now
@@ -115,7 +145,7 @@ getData windowDuration =
     in
     Http.get
         { url = "/api/sensor_data?window=" ++ stringDuration
-        , expect = Http.expectJson GotData dataDecoder
+        , expect = Http.expectJson GotData allDataDecoder
         }
 
 
@@ -136,10 +166,11 @@ getStatus =
 type Msg
     = FetchData Posix
     | FetchStatus Posix
-    | GotData (Result Http.Error (List ReadData))
+    | GotData (Result Http.Error AllData)
     | GotStatus (Result Http.Error DeviceInfoResponse)
     | ChangeWindow WindowDuration
-    | OnHover (List (CI.One ReadData CI.Dot))
+    | OnReadHover (List (CI.One ReadData CI.Dot))
+    | OnEpaHover (List (CI.One EpaData CI.Dot))
     | Tick Posix
 
 
@@ -152,7 +183,7 @@ update msg model =
             -- On Data received
             case result of
                 Ok data ->
-                    ( { model | lastReads = getLastListItem data, allReads = data, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
+                    ( { model | lastReads = getLastListItem data, allReads = data.reads, allEpas = data.epas, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
 
                 Err e ->
                     ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve read data", errorMessage = errorToString e } }, Cmd.none )
@@ -185,8 +216,13 @@ update msg model =
             -- Window duration changed
             ( { model | windowDuration = window }, Task.perform FetchData Time.now )
 
-        OnHover hovering ->
-            ( { model | hovering = hovering }, Cmd.none )
+        OnReadHover hovering ->
+            -- Hover over a datapoint on the read graph
+            ( { model | hoveringReads = hovering }, Cmd.none )
+
+        OnEpaHover hovering ->
+            -- Hover over a datapoint on the EPA graph
+            ( { model | hoveringEpas = hovering }, Cmd.none )
 
         Tick newTime ->
             let
@@ -265,10 +301,18 @@ view model =
                         ]
                     ]
                 ]
-            , Grid.row [ Row.attrs [ style "padding-top" "1em" ], Row.centerMd ]
+            , Grid.row [] [ Grid.col [] [ h2 [] [ text "EPA AQI" ] ] ]
+            , Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
                 [ Grid.col [ Col.lg ]
                     [ div [ style "height" "400px" ]
-                        [ G.getChart { graphData = model.allReads, currentHover = model.hovering } OnHover ]
+                        [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas } OnEpaHover ]
+                    ]
+                ]
+            , Grid.row [] [ Grid.col [] [ h2 [] [ text "PM2.5/PM10 Reads" ] ] ]
+            , Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
+                [ Grid.col [ Col.lg ]
+                    [ div [ style "height" "400px" ]
+                        [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads } OnReadHover ]
                     ]
                 ]
             ]
@@ -319,15 +363,32 @@ viewBigNumber value numberType =
 
 {-| Decoder function for JSON read data
 -}
-dataDecoder : Decoder (List ReadData)
-dataDecoder =
+readDataDecoder : Decoder (List ReadData)
+readDataDecoder =
     list
-        (map4 ReadData
+        (map3 ReadData
             (field "t" float)
-            (field "epa" float)
             (field "pm25" float)
             (field "pm10" float)
         )
+
+
+{-| Decoder function for JSON epa data
+-}
+epaDataDecoder : Decoder (List EpaData)
+epaDataDecoder =
+    list
+        (map2 EpaData
+            (field "t" float)
+            (field "epa" float)
+        )
+
+
+allDataDecoder : Decoder AllData
+allDataDecoder =
+    map2 AllData
+        (field "reads" readDataDecoder)
+        (field "epas" epaDataDecoder)
 
 
 type alias DeviceInfoResponse =
@@ -380,14 +441,26 @@ getLastListItem [
 ] = [{time = 3, epa = 3, pm25 = 3, pm 10 = 3}]
 
 -}
-getLastListItem : List ReadData -> ReadData
-getLastListItem myList =
-    case List.head (List.reverse myList) of
-        Just a ->
-            a
+getLastListItem : AllData -> LatestData
+getLastListItem allData =
+    let
+        lastReads =
+            case List.head (List.reverse allData.reads) of
+                Just a ->
+                    a
 
-        Nothing ->
-            { time = 0, epa = 0, pm25 = 0, pm10 = 0 }
+                Nothing ->
+                    { time = 0, pm25 = 0, pm10 = 0 }
+
+        lastEpas =
+            case List.head (List.reverse allData.epas) of
+                Just a ->
+                    a
+
+                Nothing ->
+                    { time = 0, epa = 0 }
+    in
+    { readTime = lastReads.time, pm25 = lastReads.pm25, pm10 = lastReads.pm10, epaTime = lastEpas.time, epa = lastEpas.epa }
 
 
 {-| Convert HTTP error to a string.

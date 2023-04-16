@@ -8,7 +8,17 @@ import uvicorn
 import databases
 from pathlib import Path
 from datetime import datetime, timedelta
-from .database import get_all_reads, add_read, add_epa_read, get_averaged_reads, create_tables, clean_old, ReadLogEntry
+from .database import (
+    get_all_reads,
+    get_all_epa_aqis,
+    add_read,
+    add_epa_read,
+    get_averaged_reads,
+    create_tables,
+    clean_old,
+    ReadLogEntry,
+    EpaAqiLogEntry,
+)
 from .read import AqiRead, Reader
 from .read.mock import MockReader
 from .read.novapm import NovaPmReader
@@ -164,9 +174,12 @@ async def read_from_device() -> None:
     await repeater(read_function)()
 
 
-def convert_all_to_view_dict(results: List[ReadLogEntry]):
+def convert_all_to_view_dict(reads: List[ReadLogEntry], epas: List[EpaAqiLogEntry]):
     """Convert data result to dictionary for view."""
-    view = [{"t": int(x.event_time.timestamp()), "epa": 123.0, "pm25": x.pm25, "pm10": x.pm10} for x in results]
+    view = {
+        "reads": [{"t": int(x.event_time.timestamp()), "pm25": x.pm25, "pm10": x.pm10} for x in reads],
+        "epas": [{"t": int(x.event_time.timestamp()), "epa": x.epa_aqi} for x in epas],
+    }
     return view
 
 
@@ -190,10 +203,12 @@ async def all_data(
     elif window == "week":
         window_delta = timedelta(weeks=1)
     if window_delta:
-        all_stats = await get_all_reads(database, datetime.now() - window_delta)
+        all_reads = await get_all_reads(database, datetime.now() - window_delta)
+        all_epas = await get_all_epa_aqis(database, datetime.now() - window_delta)
     else:
-        all_stats = await get_all_reads(database, None)
-    all_json = convert_all_to_view_dict(all_stats)
+        all_reads = await get_all_reads(database, None)
+        all_epas = await get_all_epa_aqis(database, None)
+    all_json = convert_all_to_view_dict(all_reads, all_epas)
     return all_json
 
 
