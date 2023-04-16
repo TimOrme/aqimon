@@ -69,4 +69,23 @@ class NovaPmReader:
         data = ser.read(10)
         pmtwofive = int.from_bytes(data[2:4], byteorder="little") / 10
         pmten = int.from_bytes(data[4:6], byteorder="little") / 10
+
+        checksum = data[8]
+        checksum_vals = sum([data[x] for x in range(2, 8)]) & 255
+
+        if data[0:1] != b"\xaa":
+            raise Exception("Incorrect header read.")
+
+        if data[9:10] != b"\xab":
+            raise Exception("Incorrect footer read.")
+
+        if checksum_vals != checksum:
+            raise Exception(f"Expected read checksum of {checksum}, but got {checksum_vals}")
+
+        if pmten > 999:
+            raise Exception("PM10 value out of range!")
+
+        if pmtwofive > 999:
+            raise Exception("PM2.5 value out of range!")
+
         return AqiRead(pmtwofive, pmten)

@@ -20,6 +20,9 @@ class Config:
     usb_sleep_time_sec: int
     sample_count_per_read: int
 
+    # EPA Properties
+    epa_lookback_minutes: int
+
     # Server properties
     server_port: int
     server_host: str
@@ -29,6 +32,7 @@ DEFAULT_CONFIG = Config(
     database_path=os.path.expanduser(DEFAULT_DB_PATH),
     poll_frequency_sec=60 * 15,  # Every 15 minutes
     retention_minutes=60 * 24 * 7,  # 1 week
+    epa_lookback_minutes=60 * 8,  # 8 hours
     reader_type="NOVAPM",
     usb_path="/dev/ttyUSB0",
     usb_sleep_time_sec=5,
@@ -50,4 +54,5 @@ def get_config_from_env() -> Config:
         sample_count_per_read=int(os.environ.get("AQIMON_SAMPLE_COUNT_PER_READ", DEFAULT_CONFIG.sample_count_per_read)),
         server_port=int(os.environ.get("AQIMON_SERVER_PORT", DEFAULT_CONFIG.server_port)),
         server_host=os.environ.get("AQIMON_SERVER_HOST", DEFAULT_CONFIG.server_host),
+        epa_lookback_minutes=int(os.environ.get("AQIMON_EPA_LOOKBACK_MIN", DEFAULT_CONFIG.epa_lookback_minutes)),
     )

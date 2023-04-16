@@ -3,7 +3,17 @@
 Ranges here are ripped from public sites.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict
+from enum import Enum
+import dataclasses
+
+
+class Pollutant(Enum):
+    """Enum of possible pollutans."""
+
+    PM_25 = 0
+    PM_10 = 1
+
 
 AQI: List[Tuple[int, int]] = [
     (0, 50),
@@ -24,6 +34,34 @@ PM_25: List[Tuple[float, float]] = [
     (350.5, 500.4),
 ]
 
+PM_10: List[Tuple[float, float]] = [
+    (0, 54),
+    (55, 154),
+    (155, 254),
+    (255, 354),
+    (355, 424),
+    (425, 504),
+    (505, 604),
+]
+
+AQI_LOOKUP_MAP: Dict[Pollutant, List[Tuple[float, float]]] = {Pollutant.PM_25: PM_25, Pollutant.PM_10: PM_10}
+
+
+@dataclasses.dataclass(frozen=True)
+class PollutantReading:
+    """A reading for a given pollutant."""
+
+    reading: float
+    pollutant: Pollutant
+
+
+@dataclasses.dataclass(frozen=True)
+class EpaAqi:
+    """An EPA AQI value, with the pollutant responsible for the value."""
+
+    reading: float
+    responsible_pollutant: Pollutant
+
 
 def get_level_from_pm25(pm25: float) -> int:
     """Get the EPA level from a PM25 reading."""
@@ -33,14 +71,28 @@ def get_level_from_pm25(pm25: float) -> int:
     raise ValueError("Invalid PM value")
 
 
-def calculate_epa_aqi(pm_25_read: float) -> int:
-    """Calculate the EPA AQI based on a PM25 reading."""
-    for i, pm_range in enumerate(PM_25):
-        if pm_range[0] <= pm_25_read <= pm_range[1]:
+def calculate_epa_aqi(readings: List[PollutantReading]) -> Optional[EpaAqi]:
+    """Calculate the EPA AQI from a list of pollutant readings.
+
+    The worst possible value will be reported.
+    """
+    max_value: Optional[EpaAqi] = None
+    for reading in readings:
+        epa_value = calculate_epa_aqi_raw(reading)
+        if max_value is None or max_value.reading < epa_value:
+            max_value = EpaAqi(epa_value, reading.pollutant)
+    return max_value
+
+
+def calculate_epa_aqi_raw(pollutant_reading: PollutantReading) -> int:
+    """Calculate the EPA AQI based on a pollutant reading."""
+    ranges = AQI_LOOKUP_MAP[pollutant_reading.pollutant]
+    for i, pm_range in enumerate(ranges):
+        if pm_range[0] <= pollutant_reading.reading <= pm_range[1]:
             aqi_low = AQI[i][0]
             aqi_high = AQI[i][1]
             pm_low = pm_range[0]
             pm_high = pm_range[1]
-            epa = ((aqi_high - aqi_low) / (pm_high - pm_low)) * (pm_25_read - pm_low) + aqi_low
+            epa = ((aqi_high - aqi_low) / (pm_high - pm_low)) * (pollutant_reading.reading - pm_low) + aqi_low
             return round(epa)
     return -1

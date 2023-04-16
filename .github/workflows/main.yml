@@ -12,6 +12,12 @@ jobs:
         uses: extractions/setup-just@v1
       - name: Setup Elm
         uses: jorelali/setup-elm@v5
+      - name: Install dev dependencies
+        run: poetry install --no-root
+        env:
+          POETRY_VIRTUALENVS_CREATE: false
+      - name: Run tests
+        run: just test
       - name: Compile Elm
         run: just compile_elm
       - name: Build and publish to pypi

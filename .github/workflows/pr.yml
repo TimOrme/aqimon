@@ -31,3 +31,5 @@ jobs:
           POETRY_VIRTUALENVS_CREATE: false
       - name: Check linting
         run: just lint
+      - name: Run tests
+        run: just test

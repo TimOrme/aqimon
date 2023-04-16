@@ -8,12 +8,7 @@ import uvicorn
 import databases
 from pathlib import Path
 from datetime import datetime, timedelta
-from .database import (
-    get_all_stats,
-    add_entry,
-    create_tables,
-    clean_old,
-)
+from .database import get_all_reads, add_read, add_epa_read, get_averaged_reads, create_tables, clean_old, ReadLogEntry
 from .read import AqiRead, Reader
 from .read.mock import MockReader
 from .read.novapm import NovaPmReader
@@ -22,7 +17,7 @@ from .config import Config, get_config_from_env
 import logging
 from functools import lru_cache
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +26,8 @@ app = FastAPI()
 project_root = Path(__file__).parent.resolve()
 static_dir = project_root / "static"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+POLLUTANT_MAP = {aqi_common.Pollutant.PM_10: "PM10", aqi_common.Pollutant.PM_25: "PM25"}
 
 
 @dataclass
@@ -123,14 +120,40 @@ async def read_from_device() -> None:
             scheduled_reader.next_schedule = datetime.now() + timedelta(seconds=config.poll_frequency_sec)
             result: AqiRead = await scheduled_reader.reader.read()
             event_time = datetime.now()
-            epa_aqi_pm25 = aqi_common.calculate_epa_aqi(result.pmtwofive)
-            await add_entry(
+            await add_read(
                 dbconn=database,
                 event_time=event_time,
-                epa_aqi_pm25=epa_aqi_pm25,
-                raw_pm25=result.pmtwofive,
-                raw_pm10=result.pmten,
+                pm25=result.pmtwofive,
+                pm10=result.pmten,
             )
+
+            averaged_reads = await get_averaged_reads(
+                dbconn=database, lookback_to=event_time - timedelta(minutes=config.epa_lookback_minutes)
+            )
+            if averaged_reads:
+                read_list = [
+                    aqi_common.PollutantReading(averaged_reads.avg_pm25, aqi_common.Pollutant.PM_25),
+                    aqi_common.PollutantReading(averaged_reads.avg_pm10, aqi_common.Pollutant.PM_10),
+                ]
+                epa_aqi = aqi_common.calculate_epa_aqi(read_list)
+
+                if epa_aqi:
+                    pollutant = POLLUTANT_MAP.get(epa_aqi.responsible_pollutant)
+
+                    if pollutant is None:
+                        raise Exception(f"Invalid Pollutant! {epa_aqi.responsible_pollutant}")
+
+                    await add_epa_read(
+                        dbconn=database,
+                        event_time=event_time,
+                        epa_aqi=epa_aqi.reading,
+                        pollutant=pollutant,
+                        read_count=averaged_reads.count,
+                        oldest_read_time=averaged_reads.oldest_read_time,
+                    )
+                else:
+                    log.warning("No EPA Value was calculated.")
+
             await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
         except Exception as e:
             log.exception("Failed to retrieve data from reader", e)
@@ -141,9 +164,9 @@ async def read_from_device() -> None:
     await repeater(read_function)()
 
 
-def convert_all_to_view_dict(results):
+def convert_all_to_view_dict(results: List[ReadLogEntry]):
     """Convert data result to dictionary for view."""
-    view = [{"t": int(x[0]), "epa": x[1], "pm25": x[2], "pm10": x[3]} for x in results]
+    view = [{"t": int(x.event_time.timestamp()), "epa": 123.0, "pm25": x.pm25, "pm10": x.pm10} for x in results]
     return view
 
 
@@ -166,7 +189,10 @@ async def all_data(
         window_delta = timedelta(days=1)
     elif window == "week":
         window_delta = timedelta(weeks=1)
-    all_stats = await get_all_stats(database, window_delta)
+    if window_delta:
+        all_stats = await get_all_reads(database, datetime.now() - window_delta)
+    else:
+        all_stats = await get_all_reads(database, None)
     all_json = convert_all_to_view_dict(all_stats)
     return all_json
 
