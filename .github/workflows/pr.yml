@@ -1,9 +1,5 @@
 name: PR Checks
 on:
-  push:
-    branches:
-      - '**'        # matches every branch
-      - '!main'    # excludes main
   pull_request:
     types: [opened, reopened, synchronize]
 
@@ -31,3 +27,5 @@ jobs:
           POETRY_VIRTUALENVS_CREATE: false
       - name: Check linting
         run: just lint
+      - name: Run tests
+        run: just test
