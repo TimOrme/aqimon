@@ -20,7 +20,6 @@ A simple Air Quality Index monitor, designed to work on the Raspberry Pi with th
 ### Pre-Requisites
 
 - Python 3.9+
-- [uhubctl](https://github.com/mvp/uhubctl) must be installed and on your PATH.
 
 ### Install
 

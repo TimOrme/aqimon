@@ -21,7 +21,7 @@ from .database import (
 )
 from .read import AqiRead, Reader
 from .read.mock import MockReader
-from .read.novapm import NovaPmReader
+from .read.novapm import OpinionatedReader
 from . import aqi_common
 from .config import Config, get_config_from_env
 import logging
@@ -80,8 +80,9 @@ def build_reader() -> ScheduledReader:
     elif conf.reader_type == "NOVAPM":
         return ScheduledReader(
             None,
-            NovaPmReader(
-                usb_path=conf.usb_path,
+            OpinionatedReader(
+                ser_dev=conf.usb_path,
+                warm_up_secs=conf.warm_up_sec,
                 iterations=conf.sample_count_per_read,
                 sleep_time=conf.usb_sleep_time_sec,
             ),
@@ -127,7 +128,6 @@ async def read_from_device() -> None:
     async def read_function() -> None:
         try:
             # Set the approximate time of the next read
-            scheduled_reader.next_schedule = datetime.now() + timedelta(seconds=config.poll_frequency_sec)
             result: AqiRead = await scheduled_reader.reader.read()
             event_time = datetime.now()
             await add_read(
@@ -165,6 +165,7 @@ async def read_from_device() -> None:
                     log.warning("No EPA Value was calculated.")
 
             await clean_old(dbconn=database, retention_minutes=config.retention_minutes)
+            scheduled_reader.next_schedule = datetime.now() + timedelta(seconds=config.poll_frequency_sec)
         except Exception as e:
             log.exception("Failed to retrieve data from reader", e)
 

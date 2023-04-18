@@ -2,30 +2,56 @@
 
 https://www.amazon.com/SDS011-Quality-Detection-Conditioning-Monitor/dp/B07FSDMRR5
 """
-from aqimon import usb
-from . import AqiRead, ReaderState, ReaderStatus
 import asyncio
+
+from . import AqiRead, ReaderState, ReaderStatus
 import serial
+from typing import Union
+from .sds011 import NovaPmReader
+from .sds011.constants import ReportingState
 from statistics import mean
 
 
-class NovaPmReader:
+class OpinionatedReader:
     """NOVA PM SDS011 Reader."""
 
-    def __init__(self, usb_path: str, iterations: int = 5, sleep_time: int = 60):
+    def __init__(
+        self, ser_dev: Union[str, serial.Serial], warm_up_secs: int = 15, iterations: int = 5, sleep_time: int = 3
+    ):
         """Create the device."""
-        self.usb_path = usb_path
+        if isinstance(ser_dev, str):
+            ser_dev = serial.Serial(ser_dev, timeout=2)
+
+        self.reader = NovaPmReader(ser_dev=ser_dev)
+
+        # Initial the reader to be in the mode we want.
+        self.reader.wake()
+        self.reader.set_reporting_mode(ReportingState.QUERYING)
+        self.reader.set_working_period(0)
+
+        self.warm_up_secs = warm_up_secs
         self.iterations = iterations
         self.sleep_time = sleep_time
+
         self.state = ReaderState(ReaderStatus.IDLE, None)
 
     async def read(self) -> AqiRead:
         """Read from the device."""
         try:
+            self.reader.wake()
+            self.state = ReaderState(ReaderStatus.WARM_UP, None)
+            await asyncio.sleep(self.warm_up_secs)
             self.state = ReaderState(ReaderStatus.READING, None)
-            result = await self._power_saving_read()
+            pm25_reads = []
+            pm10_reads = []
+            for x in range(0, self.iterations):
+                await asyncio.sleep(self.sleep_time)
+                result = self.reader.query()
+                pm25_reads.append(result.pm25)
+                pm10_reads.append(result.pm10)
+            self.reader.sleep()
             self.state = ReaderState(ReaderStatus.IDLE, None)
-            return result
+            return AqiRead(pmtwofive=mean(pm25_reads), pmten=mean(pm10_reads))
         except Exception as e:
             self.state = ReaderState(ReaderStatus.ERRORING, e)
             raise e
@@ -33,59 +59,3 @@ class NovaPmReader:
     def get_state(self) -> ReaderState:
         """Get the current state of the reader."""
         return self.state
-
-    async def _power_saving_read(self) -> AqiRead:
-        try:
-            await usb.turn_on_usb()
-            await asyncio.sleep(5)
-        except usb.UhubCtlNotInstalled:
-            pass
-        result = await self._averaged_read()
-        try:
-            await usb.turn_off_usb()
-            await asyncio.sleep(5)
-        except usb.UhubCtlNotInstalled:
-            pass
-
-        return AqiRead(result.pmtwofive, result.pmten)
-
-    async def _averaged_read(self) -> AqiRead:
-        pm25_reads = []
-        pm10_reads = []
-
-        for x in range(self.iterations):
-            data = self._read()
-            pm25_reads.append(data.pmtwofive)
-            pm10_reads.append(data.pmten)
-            await asyncio.sleep(self.sleep_time)
-
-        avg_pm25 = mean(pm25_reads)
-        avg_pm10 = mean(pm10_reads)
-
-        return AqiRead(pmtwofive=avg_pm25, pmten=avg_pm10)
-
-    def _read(self) -> AqiRead:
-        ser = serial.Serial(self.usb_path)
-        data = ser.read(10)
-        pmtwofive = int.from_bytes(data[2:4], byteorder="little") / 10
-        pmten = int.from_bytes(data[4:6], byteorder="little") / 10
-
-        checksum = data[8]
-        checksum_vals = sum([data[x] for x in range(2, 8)]) & 255
-
-        if data[0:1] != b"\xaa":
-            raise Exception("Incorrect header read.")
-
-        if data[9:10] != b"\xab":
-            raise Exception("Incorrect footer read.")
-
-        if checksum_vals != checksum:
-            raise Exception(f"Expected read checksum of {checksum}, but got {checksum_vals}")
-
-        if pmten > 999:
-            raise Exception("PM10 value out of range!")
-
-        if pmtwofive > 999:
-            raise Exception("PM2.5 value out of range!")
-
-        return AqiRead(pmtwofive, pmten)

@@ -19,6 +19,7 @@ class Config:
     usb_path: str
     usb_sleep_time_sec: int
     sample_count_per_read: int
+    warm_up_sec: int
 
     # EPA Properties
     epa_lookback_minutes: int
@@ -36,6 +37,7 @@ DEFAULT_CONFIG = Config(
     reader_type="NOVAPM",
     usb_path="/dev/ttyUSB0",
     usb_sleep_time_sec=5,
+    warm_up_sec=15,
     sample_count_per_read=5,
     server_port=8000,
     server_host="0.0.0.0",
@@ -51,6 +53,7 @@ def get_config_from_env() -> Config:
         reader_type=os.environ.get("AQIMON_READER_TYPE", DEFAULT_CONFIG.reader_type),
         usb_path=os.environ.get("AQIMON_USB_PATH", DEFAULT_CONFIG.usb_path),
         usb_sleep_time_sec=int(os.environ.get("AQIMON_USB_SLEEP_TIME_SEC", DEFAULT_CONFIG.usb_sleep_time_sec)),
+        warm_up_sec=int(os.environ.get("AQIMON_WARM_UP_SEC", DEFAULT_CONFIG.warm_up_sec)),
         sample_count_per_read=int(os.environ.get("AQIMON_SAMPLE_COUNT_PER_READ", DEFAULT_CONFIG.sample_count_per_read)),
         server_port=int(os.environ.get("AQIMON_SERVER_PORT", DEFAULT_CONFIG.server_port)),
         server_host=os.environ.get("AQIMON_SERVER_HOST", DEFAULT_CONFIG.server_host),
