@@ -17,6 +17,7 @@ def reader():
         reader.wake()
     except QueryInActiveModeException:
         pass
+    reader.set_reporting_mode(ReportingState.QUERYING)
     reader.set_working_period(0)
     reader.set_reporting_mode(ReportingState.ACTIVE)
     yield reader
