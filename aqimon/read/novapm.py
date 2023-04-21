@@ -8,7 +8,6 @@ from . import AqiRead, ReaderState, ReaderStatus
 import serial
 from typing import Union
 from .sds011 import NovaPmReader
-from .sds011.constants import ReportingState
 from statistics import mean
 
 
@@ -26,8 +25,13 @@ class OpinionatedReader:
 
         # Initial the reader to be in the mode we want.
         self.reader.wake()
-        self.reader.set_reporting_mode(ReportingState.QUERYING)
+        try:
+            self.reader.query_sleep_state()
+        except Exception:
+            pass
+        self.reader.set_query_mode()
         self.reader.set_working_period(0)
+        self.reader.query_working_period()
 
         self.warm_up_secs = warm_up_secs
         self.iterations = iterations
@@ -39,6 +43,7 @@ class OpinionatedReader:
         """Read from the device."""
         try:
             self.reader.wake()
+            self.reader.query_sleep_state()
             self.state = ReaderState(ReaderStatus.WARM_UP, None)
             await asyncio.sleep(self.warm_up_secs)
             self.state = ReaderState(ReaderStatus.READING, None)
@@ -46,14 +51,18 @@ class OpinionatedReader:
             pm10_reads = []
             for x in range(0, self.iterations):
                 await asyncio.sleep(self.sleep_time)
-                result = self.reader.query()
+                self.reader.request_data()
+                result = self.reader.query_data()
                 pm25_reads.append(result.pm25)
                 pm10_reads.append(result.pm10)
             self.reader.sleep()
+            self.reader.query_sleep_state()
             self.state = ReaderState(ReaderStatus.IDLE, None)
             return AqiRead(pmtwofive=mean(pm25_reads), pmten=mean(pm10_reads))
         except Exception as e:
             self.state = ReaderState(ReaderStatus.ERRORING, e)
+            self.reader.sleep()
+            self.reader.query_sleep_state()
             raise e
 
     def get_state(self) -> ReaderState:

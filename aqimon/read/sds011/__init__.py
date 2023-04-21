@@ -7,6 +7,7 @@ Spec: https://cdn-reichelt.de/documents/datenblatt/X200/SDS011-DATASHEET.pdf
 """
 
 import serial
+import time
 from .responses import (
     QueryReadResponse,
     ReportingModeReadResponse,
@@ -16,25 +17,28 @@ from .responses import (
     WorkingPeriodReadResponse,
 )
 from . import constants as con
-from .exceptions import IncompleteReadException, InvalidDeviceIdException
+from .exceptions import IncompleteReadException, IncorrectCommandException
 
 
 class NovaPmReader:
     """NOVA PM SDS011 Reader."""
 
-    def __init__(self, ser_dev: serial.Serial):
+    def __init__(self, ser_dev: serial.Serial, send_command_sleep: int = 1):
         """Create the device."""
         self.ser = ser_dev
+        self.send_command_sleep = send_command_sleep
 
-    def query(self, query_mode: bool = True) -> QueryReadResponse:
+    def request_data(self) -> None:
+        """Request device to return pollutant data."""
+        cmd = con.Commands.QUERY.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
+        self._send_command(cmd)
+
+    def query_data(self) -> QueryReadResponse:
         """Query the device for pollutant data."""
-        if query_mode:
-            cmd = con.Commands.QUERY.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
-            self._send_command(cmd)
         return QueryReadResponse(self._read_response())
 
-    def get_reporting_mode(self) -> ReportingModeReadResponse:
-        """Get the current reporting mode of the device."""
+    def request_reporting_mode(self) -> None:
+        """Request device to return the current reporting mode."""
         cmd = (
             con.Commands.SET_REPORTING_MODE.value
             + con.ReportingMode.QUERY.value
@@ -43,9 +47,32 @@ class NovaPmReader:
             + con.ALL_SENSOR_ID
         )
         self._send_command(cmd)
+
+    def query_reporting_mode(self) -> ReportingModeReadResponse:
+        """Get the current reporting mode of the device."""
         return ReportingModeReadResponse(self._read_response())
 
-    def set_reporting_mode(self, reporting_mode: con.ReportingState) -> ReportingModeReadResponse:
+    def set_active_mode(self) -> None:
+        """Set the reporting mode to active."""
+        self._set_reporting_mode(con.ReportingState.ACTIVE)
+        try:
+            self.query_reporting_mode()
+        except IncorrectCommandException:
+            pass
+        except IncompleteReadException:
+            pass
+
+    def set_query_mode(self) -> None:
+        """Set the reporting mode to querying."""
+        self._set_reporting_mode(con.ReportingState.QUERYING)
+        try:
+            self.query_reporting_mode()
+        except IncorrectCommandException:
+            pass
+        except IncompleteReadException:
+            pass
+
+    def _set_reporting_mode(self, reporting_mode: con.ReportingState) -> None:
         """Set the reporting mode, either ACTIVE or QUERYING.
 
         ACTIVE mode means the device will always return a Query command response when data is asked for, regardless of
@@ -66,21 +93,17 @@ class NovaPmReader:
         # Switching between reporting modes is finicky; resetting the serial connection seems to address issues.
         self.ser.close()
         self.ser.open()
-        return ReportingModeReadResponse(self._read_response())
 
-    def get_sleep_state(self) -> SleepWakeReadResponse:
+    def request_sleep_state(self) -> None:
         """Get the current sleep state."""
-        cmd = (
-            con.Commands.SET_SLEEP.value
-            + con.SleepMode.QUERY.value
-            + con.SleepState.WORK.value
-            + (b"\x00" * 10)
-            + con.ALL_SENSOR_ID
-        )
+        cmd = con.Commands.SET_SLEEP.value + con.SleepMode.QUERY.value + b"\x00" + (b"\x00" * 10) + con.ALL_SENSOR_ID
         self._send_command(cmd)
+
+    def query_sleep_state(self) -> SleepWakeReadResponse:
+        """Get the current sleep state."""
         return SleepWakeReadResponse(self._read_response())
 
-    def set_sleep_state(self, sleep_state: con.SleepState) -> SleepWakeReadResponse:
+    def set_sleep_state(self, sleep_state: con.SleepState) -> None:
         """Set the sleep state, either wake or sleep."""
         cmd = (
             con.Commands.SET_SLEEP.value
@@ -90,28 +113,27 @@ class NovaPmReader:
             + con.ALL_SENSOR_ID
         )
         self._send_command(cmd)
-        return SleepWakeReadResponse(self._read_response())
 
-    def sleep(self) -> SleepWakeReadResponse:
+    def sleep(self) -> None:
         """Put the device to sleep, turning off fan and diode."""
         return self.set_sleep_state(con.SleepState.SLEEP)
 
-    def wake(self) -> SleepWakeReadResponse:
+    def wake(self) -> None:
         """Wake the device up to start reading."""
         return self.set_sleep_state(con.SleepState.WORK)
 
-    def set_device_id(self, device_id: bytes, target_device_id: bytes = con.ALL_SENSOR_ID) -> DeviceIdResponse:
+    def set_device_id(self, device_id: bytes, target_device_id: bytes = con.ALL_SENSOR_ID) -> None:
         """Set the device ID."""
         if len(device_id) != 2 or len(target_device_id) != 2:
             raise AttributeError(f"Device ID must be 4 bytes, found {len(device_id)}, and {len(target_device_id)}")
         cmd = con.Commands.SET_DEVICE_ID.value + (b"\x00" * 10) + device_id + target_device_id
         self._send_command(cmd)
-        try:
-            return DeviceIdResponse(self._read_response())
-        except IncompleteReadException:
-            raise InvalidDeviceIdException(f"Unable to find device ID of {target_device_id!s}")
 
-    def get_working_period(self) -> WorkingPeriodReadResponse:
+    def query_device_id(self) -> DeviceIdResponse:
+        """Set the device ID."""
+        return DeviceIdResponse(self._read_response())
+
+    def request_working_period(self) -> None:
         """Retrieve the current working period for the device."""
         cmd = (
             con.Commands.SET_WORKING_PERIOD.value
@@ -120,9 +142,12 @@ class NovaPmReader:
             + con.ALL_SENSOR_ID
         )
         self._send_command(cmd)
+
+    def query_working_period(self) -> WorkingPeriodReadResponse:
+        """Retrieve the current working period for the device."""
         return WorkingPeriodReadResponse(self._read_response())
 
-    def set_working_period(self, working_period: int) -> WorkingPeriodReadResponse:
+    def set_working_period(self, working_period: int) -> None:
         """Set the working period for the device.
 
         Working period must be between 0 and 30.
@@ -140,12 +165,14 @@ class NovaPmReader:
             + con.ALL_SENSOR_ID
         )
         self._send_command(cmd)
-        return WorkingPeriodReadResponse(self._read_response())
 
-    def get_firmware_version(self) -> CheckFirmwareReadResponse:
+    def request_firmware_version(self) -> None:
         """Retrieve the firmware version from the device."""
         cmd = con.Commands.CHECK_FIRMWARE_VERSION.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
         self._send_command(cmd)
+
+    def query_firmware_version(self) -> CheckFirmwareReadResponse:
+        """Retrieve the firmware version from the device."""
         return CheckFirmwareReadResponse(self._read_response())
 
     def _send_command(self, cmd: bytes):
@@ -155,6 +182,7 @@ class NovaPmReader:
         if len(full_command) != 19:
             raise Exception(f"Command length must be 19, but was {len(full_command)}")
         self.ser.write(full_command)
+        time.sleep(self.send_command_sleep)
 
     def _read_response(self) -> bytes:
         """Read a response from the device."""

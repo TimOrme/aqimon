@@ -19,7 +19,6 @@ from .exceptions import (
     IncorrectCommandCodeException,
     IncorrectWrapperException,
     IncompleteReadException,
-    QueryInActiveModeException,
 )
 
 
@@ -53,10 +52,6 @@ class ReadResponse:
         if self.checksum != self.calc_checksum():
             raise ChecksumFailedException(expected=self.checksum, actual=self.calc_checksum())
         if self.cmd_id != self.expected_response_type.value:
-            if self.cmd_id == ResponseTypes.QUERY_RESPONSE.value:
-                raise QueryInActiveModeException(
-                    "Tried to retrieve response, but it looks like device is in ACTIVE mode."
-                )
             raise IncorrectCommandException(expected=self.expected_response_type.value, actual=self.cmd_id)
 
         # Query responses don't validate the command code

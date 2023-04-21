@@ -1,5 +1,4 @@
 from serial import Serial
-from typing import Optional
 from aqimon.read.sds011.constants import (
     HEAD,
     TAIL,
@@ -35,7 +34,8 @@ class Sds011SerialEmulator(Serial):
         Initializes to factory defaults.
         """
         super().__init__()
-        self.last_write: Optional[WriteData] = None
+        self.response_buffer = b""
+        self.response_type = b""
         self.query_mode = ReportingState.ACTIVE
         self.device_id = b"\x01\x01"
         self.sleep_state = SleepState.WORK
@@ -54,91 +54,73 @@ class Sds011SerialEmulator(Serial):
 
     def read(self, size: int = 1) -> bytes:
         """Read from the emulator."""
-        if self.last_write is not None:
-            if self.query_mode == ReportingState.ACTIVE:
-                # Admittedly, this command sometimes fails on the device as well. It's the only one that seems to fairly
-                # consistently return in ACTIVE mode though, so the emulator does the same.
-                if (
-                    self.last_write.command == Commands.SET_REPORTING_MODE
-                    and ReportingMode(self.last_write.raw_body_data[1:2]) == ReportingMode.SET_MODE
-                ):
-                    return self._generate_read(
-                        ResponseTypes.GENERAL_RESPONSE,
-                        Commands.SET_REPORTING_MODE.value
-                        + self.last_write.raw_body_data[1:2]
-                        + self.query_mode.value
-                        + b"\x00",
-                    )
+        if self.query_mode == ReportingState.ACTIVE:
+            # If in active mode, always return query response.
+            return self._get_query_response()
+        else:
+            response = self.response_buffer
+            self.response_buffer = b""
+            return response
 
-                # If in active mode, almost always return query response.
-                return self._generate_read(ResponseTypes.QUERY_RESPONSE, b"\x19\x00\x64\x00")
-            else:
-                if self.last_write.command == Commands.QUERY:
-                    return self._generate_read(ResponseTypes.QUERY_RESPONSE, b"\x19\x00\x64\x00")
-                elif self.last_write.command == Commands.SET_REPORTING_MODE:
-                    return self._generate_read(
-                        ResponseTypes.GENERAL_RESPONSE,
-                        Commands.SET_REPORTING_MODE.value
-                        + self.last_write.raw_body_data[1:2]
-                        + self.query_mode.value
-                        + b"\x00",
-                    )
-                elif self.last_write.command == Commands.SET_DEVICE_ID:
-                    return self._generate_read(
-                        ResponseTypes.GENERAL_RESPONSE, Commands.SET_DEVICE_ID.value + (b"\x00" * 3)
-                    )
-                elif self.last_write.command == Commands.SET_SLEEP:
-                    return self._generate_read(
-                        ResponseTypes.GENERAL_RESPONSE,
-                        Commands.SET_SLEEP.value
-                        + self.last_write.raw_body_data[1:2]
-                        + self.sleep_state.value
-                        + b"\x00",
-                    )
-                elif self.last_write.command == Commands.SET_WORKING_PERIOD:
-                    return self._generate_read(
-                        ResponseTypes.GENERAL_RESPONSE,
-                        Commands.SET_WORKING_PERIOD.value
-                        + self.last_write.raw_body_data[1:2]
-                        + self.working_period
-                        + b"\x00",
-                    )
-                elif self.last_write.command == Commands.CHECK_FIRMWARE_VERSION:
-                    return self._generate_read(
-                        ResponseTypes.GENERAL_RESPONSE,
-                        Commands.CHECK_FIRMWARE_VERSION.value
-                        + self.firmware_year
-                        + self.firmware_month
-                        + self.firmware_day,
-                    )
-        return b""
-
-    def _generate_read(self, response_type: ResponseTypes, cmd: bytes):
+    def _generate_read(self, response_type: ResponseTypes, cmd: bytes) -> bytes:
         """Generate a read command, with wrapper and checksum."""
         cmd_and_id = cmd + self.device_id
         return HEAD + response_type.value + cmd_and_id + read_checksum(cmd_and_id) + TAIL
 
     def write(self, data: bytes) -> int:
         """Write to the emulator."""
-        self.last_write = parse_write_data(data)
-        if (
-            self.last_write.command == Commands.SET_REPORTING_MODE
-            and ReportingMode(self.last_write.raw_body_data[1:2]) == ReportingMode.SET_MODE
-        ):
-            self.query_mode = ReportingState(self.last_write.raw_body_data[2:3])
-        elif self.last_write.command == Commands.SET_DEVICE_ID:
-            self.device_id = self.last_write.raw_body_data[11:13]
-        elif (
-            self.last_write.command == Commands.SET_SLEEP
-            and SleepMode(self.last_write.raw_body_data[1:2]) == SleepMode.SET_MODE
-        ):
-            self.sleep_state = SleepState(self.last_write.raw_body_data[2:3])
-        elif (
-            self.last_write.command == Commands.SET_WORKING_PERIOD
-            and WorkingPeriodMode(self.last_write.raw_body_data[1:2]) == WorkingPeriodMode.SET_MODE
-        ):
-            self.working_period = self.last_write.raw_body_data[2:3]
+        last_write = parse_write_data(data)
+        self.response_type = last_write.raw_body_data[1:2]
+        if last_write.command == Commands.SET_REPORTING_MODE:
+            if ReportingMode(last_write.raw_body_data[1:2]) == ReportingMode.SET_MODE:
+                self.query_mode = ReportingState(last_write.raw_body_data[2:3])
+            self.response_buffer = self._set_reporting_mode_response()
+        elif last_write.command == Commands.QUERY:
+            self.response_buffer = self._get_query_response()
+        elif last_write.command == Commands.SET_DEVICE_ID:
+            self.device_id = last_write.raw_body_data[11:13]
+            self.response_buffer = self._set_device_id_response()
+        elif last_write.command == Commands.SET_SLEEP:
+            if SleepMode(last_write.raw_body_data[1:2]) == SleepMode.SET_MODE:
+                self.sleep_state = SleepState(last_write.raw_body_data[2:3])
+            self.response_buffer = self._set_sleep_response()
+        elif last_write.command == Commands.SET_WORKING_PERIOD:
+            if WorkingPeriodMode(last_write.raw_body_data[1:2]) == WorkingPeriodMode.SET_MODE:
+                self.working_period = last_write.raw_body_data[2:3]
+            self.response_buffer = self._set_working_period_response()
+        elif last_write.command == Commands.CHECK_FIRMWARE_VERSION:
+            self.response_buffer = self._check_firmware_response()
         return len(data)
+
+    def _get_query_response(self) -> bytes:
+        return self._generate_read(ResponseTypes.QUERY_RESPONSE, b"\x19\x00\x64\x00")
+
+    def _set_reporting_mode_response(self) -> bytes:
+        return self._generate_read(
+            ResponseTypes.GENERAL_RESPONSE,
+            Commands.SET_REPORTING_MODE.value + self.response_type + self.query_mode.value + b"\x00",
+        )
+
+    def _set_device_id_response(self) -> bytes:
+        return self._generate_read(ResponseTypes.GENERAL_RESPONSE, Commands.SET_DEVICE_ID.value + (b"\x00" * 3))
+
+    def _set_sleep_response(self) -> bytes:
+        return self._generate_read(
+            ResponseTypes.GENERAL_RESPONSE,
+            Commands.SET_SLEEP.value + self.response_type + self.sleep_state.value + b"\x00",
+        )
+
+    def _set_working_period_response(self) -> bytes:
+        return self._generate_read(
+            ResponseTypes.GENERAL_RESPONSE,
+            Commands.SET_WORKING_PERIOD.value + self.response_type + self.working_period + b"\x00",
+        )
+
+    def _check_firmware_response(self) -> bytes:
+        return self._generate_read(
+            ResponseTypes.GENERAL_RESPONSE,
+            Commands.CHECK_FIRMWARE_VERSION.value + self.firmware_year + self.firmware_month + self.firmware_day,
+        )
 
 
 def read_checksum(data: bytes) -> bytes:

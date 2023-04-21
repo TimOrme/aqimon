@@ -49,12 +49,6 @@ class IncompleteReadException(Sds011Exception):
     pass
 
 
-class QueryInActiveModeException(Sds011Exception):
-    """Thrown if any query is issued while the device is in ACTIVE mode."""
-
-    pass
-
-
 class InvalidDeviceIdException(Sds011Exception):
     """Thrown if the trying to set the device ID on an invalid device."""
 

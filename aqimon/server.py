@@ -168,6 +168,7 @@ async def read_from_device() -> None:
             scheduled_reader.next_schedule = datetime.now() + timedelta(seconds=config.poll_frequency_sec)
         except Exception as e:
             log.exception("Failed to retrieve data from reader", e)
+            scheduled_reader.next_schedule = datetime.now() + timedelta(seconds=config.poll_frequency_sec)
 
     # Note that we leverage the @repeat_every decorator here, but as a regular function call.  This allows us to
     # use a non-global config object to specify the poll frequency
