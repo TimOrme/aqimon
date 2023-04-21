@@ -30,7 +30,7 @@ class NovaPmReader:
 
     def request_data(self) -> None:
         """Request device to return pollutant data."""
-        cmd = con.Commands.QUERY.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
+        cmd = con.Command.QUERY.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
         self._send_command(cmd)
 
     def query_data(self) -> QueryReadResponse:
@@ -40,9 +40,9 @@ class NovaPmReader:
     def request_reporting_mode(self) -> None:
         """Request device to return the current reporting mode."""
         cmd = (
-            con.Commands.SET_REPORTING_MODE.value
-            + con.ReportingMode.QUERY.value
-            + con.ReportingState.ACTIVE.value
+            con.Command.SET_REPORTING_MODE.value
+            + con.OperationType.QUERY.value
+            + con.ReportingMode.ACTIVE.value
             + (b"\x00" * 10)
             + con.ALL_SENSOR_ID
         )
@@ -54,7 +54,7 @@ class NovaPmReader:
 
     def set_active_mode(self) -> None:
         """Set the reporting mode to active."""
-        self._set_reporting_mode(con.ReportingState.ACTIVE)
+        self._set_reporting_mode(con.ReportingMode.ACTIVE)
         try:
             self.query_reporting_mode()
         except IncorrectCommandException:
@@ -64,7 +64,7 @@ class NovaPmReader:
 
     def set_query_mode(self) -> None:
         """Set the reporting mode to querying."""
-        self._set_reporting_mode(con.ReportingState.QUERYING)
+        self._set_reporting_mode(con.ReportingMode.QUERYING)
         try:
             self.query_reporting_mode()
         except IncorrectCommandException:
@@ -72,7 +72,7 @@ class NovaPmReader:
         except IncompleteReadException:
             pass
 
-    def _set_reporting_mode(self, reporting_mode: con.ReportingState) -> None:
+    def _set_reporting_mode(self, reporting_mode: con.ReportingMode) -> None:
         """Set the reporting mode, either ACTIVE or QUERYING.
 
         ACTIVE mode means the device will always return a Query command response when data is asked for, regardless of
@@ -83,8 +83,8 @@ class NovaPmReader:
         ACTIVE mode is the factory default, but generally, QUERYING mode is preferrable for the longevity of the device.
         """
         cmd = (
-            con.Commands.SET_REPORTING_MODE.value
-            + con.ReportingMode.SET_MODE.value
+            con.Command.SET_REPORTING_MODE.value
+            + con.OperationType.SET_MODE.value
             + reporting_mode.value
             + (b"\x00" * 10)
             + con.ALL_SENSOR_ID
@@ -96,7 +96,7 @@ class NovaPmReader:
 
     def request_sleep_state(self) -> None:
         """Get the current sleep state."""
-        cmd = con.Commands.SET_SLEEP.value + con.SleepMode.QUERY.value + b"\x00" + (b"\x00" * 10) + con.ALL_SENSOR_ID
+        cmd = con.Command.SET_SLEEP.value + con.OperationType.QUERY.value + b"\x00" + (b"\x00" * 10) + con.ALL_SENSOR_ID
         self._send_command(cmd)
 
     def query_sleep_state(self) -> SleepWakeReadResponse:
@@ -106,8 +106,8 @@ class NovaPmReader:
     def set_sleep_state(self, sleep_state: con.SleepState) -> None:
         """Set the sleep state, either wake or sleep."""
         cmd = (
-            con.Commands.SET_SLEEP.value
-            + con.SleepMode.SET_MODE.value
+            con.Command.SET_SLEEP.value
+            + con.OperationType.SET_MODE.value
             + sleep_state.value
             + (b"\x00" * 10)
             + con.ALL_SENSOR_ID
@@ -126,7 +126,7 @@ class NovaPmReader:
         """Set the device ID."""
         if len(device_id) != 2 or len(target_device_id) != 2:
             raise AttributeError(f"Device ID must be 4 bytes, found {len(device_id)}, and {len(target_device_id)}")
-        cmd = con.Commands.SET_DEVICE_ID.value + (b"\x00" * 10) + device_id + target_device_id
+        cmd = con.Command.SET_DEVICE_ID.value + (b"\x00" * 10) + device_id + target_device_id
         self._send_command(cmd)
 
     def query_device_id(self) -> DeviceIdResponse:
@@ -135,12 +135,7 @@ class NovaPmReader:
 
     def request_working_period(self) -> None:
         """Retrieve the current working period for the device."""
-        cmd = (
-            con.Commands.SET_WORKING_PERIOD.value
-            + con.WorkingPeriodMode.QUERY.value
-            + (b"\x00" * 11)
-            + con.ALL_SENSOR_ID
-        )
+        cmd = con.Command.SET_WORKING_PERIOD.value + con.OperationType.QUERY.value + (b"\x00" * 11) + con.ALL_SENSOR_ID
         self._send_command(cmd)
 
     def query_working_period(self) -> WorkingPeriodReadResponse:
@@ -158,8 +153,8 @@ class NovaPmReader:
         if 0 >= working_period >= 30:
             raise AttributeError("Working period must be between 0 and 30")
         cmd = (
-            con.Commands.SET_WORKING_PERIOD.value
-            + con.WorkingPeriodMode.SET_MODE.value
+            con.Command.SET_WORKING_PERIOD.value
+            + con.OperationType.SET_MODE.value
             + bytes([working_period])
             + (b"\x00" * 10)
             + con.ALL_SENSOR_ID
@@ -168,7 +163,7 @@ class NovaPmReader:
 
     def request_firmware_version(self) -> None:
         """Retrieve the firmware version from the device."""
-        cmd = con.Commands.CHECK_FIRMWARE_VERSION.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
+        cmd = con.Command.CHECK_FIRMWARE_VERSION.value + (b"\x00" * 12) + con.ALL_SENSOR_ID
         self._send_command(cmd)
 
     def query_firmware_version(self) -> CheckFirmwareReadResponse:

@@ -1,7 +1,7 @@
 import pytest
 
 from aqimon.read.sds011 import NovaPmReader
-from aqimon.read.sds011.constants import ReportingState, SleepState
+from aqimon.read.sds011.constants import ReportingMode, SleepState
 from aqimon.read.sds011.exceptions import (
     IncorrectCommandException,
 )
@@ -46,7 +46,7 @@ def test_hammer_reporting_mode(reader: NovaPmReader):
     reader.set_query_mode()
 
     reader.request_reporting_mode()
-    assert reader.query_reporting_mode().state == ReportingState.QUERYING
+    assert reader.query_reporting_mode().state == ReportingMode.QUERYING
 
 
 def test_hammer_sleep_query_mode(reader: NovaPmReader):
@@ -78,7 +78,7 @@ def test_get_reporting_mode(reader: NovaPmReader):
     reader.set_query_mode()
     reader.request_reporting_mode()
     result = reader.query_reporting_mode()
-    assert result.state == ReportingState.QUERYING
+    assert result.state == ReportingMode.QUERYING
 
 
 def test_get_reporting_mode_while_active_fails(reader: NovaPmReader):
