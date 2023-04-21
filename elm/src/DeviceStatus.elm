@@ -13,6 +13,7 @@ import Time exposing (..)
 -}
 type DeviceState
     = Reading
+    | WarmingUp
     | Idle
     | Failing
 
@@ -62,6 +63,9 @@ deviceStatusImage deviceStatus =
         Reading ->
             "/static/images/loading.gif"
 
+        WarmingUp ->
+            "/static/images/loading.gif"
+
         Idle ->
             "/static/images/idle.png"
 
@@ -77,6 +81,9 @@ deviceStatusColor deviceStatus =
         Reading ->
             "green"
 
+        WarmingUp ->
+            "orange"
+
         Idle ->
             "gray"
 
@@ -91,6 +98,9 @@ deviceStatusToString deviceStatus =
     case deviceStatus of
         Reading ->
             "Reading"
+
+        WarmingUp ->
+            "Warming Up"
 
         Idle ->
             "Idle"

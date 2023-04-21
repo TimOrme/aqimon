@@ -419,6 +419,9 @@ stateDecoder =
                     "IDLE" ->
                         succeed DS.Idle
 
+                    "WARM_UP" ->
+                        succeed DS.WarmingUp
+
                     "ERRORING" ->
                         succeed DS.Failing
 
@@ -527,7 +530,7 @@ shouldFetchStatus model currentTime =
             Maybe.map2 getDuration model.readerState.nextSchedule (Just currentTime) |> Maybe.withDefault 1
     in
     -- Reader state is active, we always want to see when it finishes ASAP.
-    (model.readerState.state == Reading)
+    (model.readerState.state == Reading || model.readerState.state == WarmingUp)
         -- We're overdue for a poll
         || (timeSinceLastPoll > maxTimeBetweenPolls)
         -- We're overdue for a read

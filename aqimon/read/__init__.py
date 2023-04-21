@@ -8,8 +8,9 @@ class ReaderStatus(Enum):
     """Enum of possible reader states."""
 
     IDLE = 1
-    READING = 2
-    ERRORING = 3
+    WARM_UP = 2
+    READING = 3
+    ERRORING = 4
 
 
 @dataclass(frozen=True)
