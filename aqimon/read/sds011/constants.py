@@ -14,7 +14,7 @@ ALL_SENSOR_ID = b"\xff\xff"
 SUBMIT_TYPE = b"\xb4"
 
 
-class ResponseTypes(Enum):
+class ResponseType(Enum):
     """Response types for commands.
 
     GENERAL_RESPONSE is for all commands except query.
@@ -26,7 +26,7 @@ class ResponseTypes(Enum):
     QUERY_RESPONSE = b"\xc0"
 
 
-class Commands(Enum):
+class Command(Enum):
     """Possible commands for the device."""
 
     SET_REPORTING_MODE = b"\x02"
@@ -37,17 +37,17 @@ class Commands(Enum):
     CHECK_FIRMWARE_VERSION = b"\x07"
 
 
-class ReportingMode(Enum):
-    """Sub command for reporting mode state.
+class OperationType(Enum):
+    """Operation type for many commands.
 
-    Can either query or set the value for the state.
+    Many commands have two modes, one for setting a value, and another for retrieving.
     """
 
     QUERY = b"\x00"
     SET_MODE = b"\x01"
 
 
-class ReportingState(Enum):
+class ReportingMode(Enum):
     """Reporting mode for the device.
 
     ACTIVE mode means that the device is constantly returning read data from the device, and won't respond correctly
@@ -58,26 +58,6 @@ class ReportingState(Enum):
 
     ACTIVE = b"\x00"
     QUERYING = b"\x01"
-
-
-class WorkingPeriodMode(Enum):
-    """Sub command for working period state.
-
-    Can either query or set the value for the state.
-    """
-
-    QUERY = b"\x00"
-    SET_MODE = b"\x01"
-
-
-class SleepMode(Enum):
-    """Sub command for sleep state.
-
-    Can either query or set the value for the state.
-    """
-
-    QUERY = b"\x00"
-    SET_MODE = b"\x01"
 
 
 class SleepState(Enum):
