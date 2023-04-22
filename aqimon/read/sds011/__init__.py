@@ -17,7 +17,7 @@ from .responses import (
     WorkingPeriodReadResponse,
 )
 from . import constants as con
-from .exceptions import IncompleteReadException, IncorrectCommandException
+from .exceptions import IncompleteReadException, IncorrectCommandException, IncorrectCommandCodeException
 
 
 class NovaPmReader:
@@ -71,6 +71,8 @@ class NovaPmReader:
             pass
         except IncompleteReadException:
             pass
+        except IncorrectCommandCodeException:
+            pass
 
     def _set_reporting_mode(self, reporting_mode: con.ReportingMode) -> None:
         """Set the reporting mode, either ACTIVE or QUERYING.
@@ -116,11 +118,22 @@ class NovaPmReader:
 
     def sleep(self) -> None:
         """Put the device to sleep, turning off fan and diode."""
-        return self.set_sleep_state(con.SleepState.SLEEP)
+        self.set_sleep_state(con.SleepState.SLEEP)
 
     def wake(self) -> None:
         """Wake the device up to start reading."""
-        return self.set_sleep_state(con.SleepState.WORK)
+        self.set_sleep_state(con.SleepState.WORK)
+
+    def safe_wake(self) -> None:
+        """Wake the device up, if you don't know what mode its in.
+
+        This operates as a fire-and-forget, even in query mode.  You shouldn't have to (and can't) query for a response
+        after this command.
+        """
+        self.wake()
+        # If we were in query mode, this would flush out the response.  If in active mode, this would be return read
+        # data, but we don't care.
+        self.ser.read(10)
 
     def set_device_id(self, device_id: bytes, target_device_id: bytes = con.ALL_SENSOR_ID) -> None:
         """Set the device ID."""
@@ -191,3 +204,113 @@ class NovaPmReader:
         if len(data) != 15:
             raise AttributeError("Invalid checksum length.")
         return sum(d for d in data) % 256
+
+
+class QueryModeReader:
+    """Reader working in query mode."""
+
+    def __init__(self, ser_dev: serial.Serial, send_command_sleep: int = 1):
+        """Create the device."""
+        self.base_reader = NovaPmReader(ser_dev=ser_dev, send_command_sleep=send_command_sleep)
+        self.base_reader.safe_wake()
+        self.base_reader.set_query_mode()
+
+    def query(self) -> QueryReadResponse:
+        """Query the device for pollutant data."""
+        self.base_reader.request_data()
+        return self.base_reader.query_data()
+
+    def get_reporting_mode(self) -> ReportingModeReadResponse:
+        """Get the current reporting mode of the device."""
+        self.base_reader.request_reporting_mode()
+        return self.base_reader.query_reporting_mode()
+
+    def get_sleep_state(self) -> SleepWakeReadResponse:
+        """Get the current sleep state."""
+        self.base_reader.request_sleep_state()
+        return self.base_reader.query_sleep_state()
+
+    def sleep(self) -> SleepWakeReadResponse:
+        """Put the device to sleep, turning off fan and diode."""
+        self.base_reader.sleep()
+        return self.base_reader.query_sleep_state()
+
+    def wake(self) -> SleepWakeReadResponse:
+        """Wake the device up to start reading."""
+        self.base_reader.wake()
+        return self.base_reader.query_sleep_state()
+
+    def set_device_id(self, device_id: bytes, target_device_id: bytes = con.ALL_SENSOR_ID) -> DeviceIdResponse:
+        """Set the device ID."""
+        self.base_reader.set_device_id(device_id, target_device_id)
+        return self.base_reader.query_device_id()
+
+    def get_working_period(self) -> WorkingPeriodReadResponse:
+        """Retrieve the current working period for the device."""
+        self.base_reader.request_working_period()
+        return self.base_reader.query_working_period()
+
+    def set_working_period(self, working_period: int) -> WorkingPeriodReadResponse:
+        """Set the working period for the device.
+
+        Working period must be between 0 and 30.
+
+        0 means the device will read continuously.
+        Any value 1-30 means the device will wake and read for 30 seconds every n*60-30 seconds.
+        """
+        self.base_reader.set_working_period(working_period)
+        return self.base_reader.query_working_period()
+
+    def get_firmware_version(self) -> CheckFirmwareReadResponse:
+        """Retrieve the firmware version from the device."""
+        self.base_reader.request_firmware_version()
+        return self.base_reader.query_firmware_version()
+
+
+class ActiveModeReader:
+    """Active Mode Reader.
+
+    Use with caution! Active mode is unpredictable.  Query mode is much preferred.
+    """
+
+    def __init__(self, ser_dev: serial.Serial, send_command_sleep: int = 2):
+        """Create the device."""
+        self.base_reader = NovaPmReader(ser_dev=ser_dev, send_command_sleep=send_command_sleep)
+        self.ser_dev = ser_dev
+        self.base_reader.safe_wake()
+        self.base_reader.set_active_mode()
+
+    def query(self) -> QueryReadResponse:
+        """Query the device for pollutant data."""
+        return self.base_reader.query_data()
+
+    def sleep(self) -> None:
+        """Put the device to sleep, turning off fan and diode."""
+        self.base_reader.sleep()
+
+        # Sleep seems to behave very strangely in active mode.  It continually outputs data for old commands for quite
+        # a while before eventually having nothing to report.  This forces it to "drain" whatever it was doing before
+        # returning, but also feels quite dangerous.
+        while len(self.ser_dev.read(10)) == 10:
+            pass
+
+    def wake(self) -> None:
+        """Wake the device up to start reading."""
+        self.base_reader.wake()
+        self.ser_dev.read(10)
+
+    def set_device_id(self, device_id: bytes, target_device_id: bytes = con.ALL_SENSOR_ID) -> None:
+        """Set the device ID."""
+        self.base_reader.set_device_id(device_id, target_device_id)
+        self.ser_dev.read(10)
+
+    def set_working_period(self, working_period: int) -> None:
+        """Set the working period for the device.
+
+        Working period must be between 0 and 30.
+
+        0 means the device will read continuously.
+        Any value 1-30 means the device will wake and read for 30 seconds every n*60-30 seconds.
+        """
+        self.base_reader.set_working_period(working_period)
+        self.ser_dev.read(10)
