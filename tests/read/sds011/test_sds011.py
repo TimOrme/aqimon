@@ -1,5 +1,3 @@
-import time
-
 import pytest
 
 from aqimon.read.sds011 import NovaPmReader, ActiveModeReader, QueryModeReader
@@ -304,10 +302,7 @@ class TestQueryModeReader:
         result = reader.wake()
         assert result.state == SleepState.WORK
 
-        # Make sure we can read again.  Device takes a second to give accurate readings after wake.
-        time.sleep(3)
         result2 = reader.query()
-
         assert 999 > result2.pm25 > 0
         assert 999 > result2.pm10 > 0
 
