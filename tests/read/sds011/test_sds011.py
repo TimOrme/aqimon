@@ -1,7 +1,6 @@
 import time
 
 import pytest
-import serial
 
 from aqimon.read.sds011 import NovaPmReader, ActiveModeReader, QueryModeReader
 from aqimon.read.sds011.constants import ReportingMode, SleepState
@@ -220,11 +219,11 @@ class TestActiveModeReader:
     @pytest.fixture
     def reader(self):
         # If you want to run these tests an integration you can replace the emulator here with a real serial device.
-        ser_dev = serial.Serial("/dev/ttyUSB0", timeout=2, baudrate=9600)
-        reader = ActiveModeReader(ser_dev=ser_dev, send_command_sleep=5)
+        # ser_dev = serial.Serial("/dev/ttyUSB0", timeout=2, baudrate=9600)
+        # reader = ActiveModeReader(ser_dev=ser_dev, send_command_sleep=5)
 
-        # ser_dev = Sds011SerialEmulator()
-        # reader = ActiveModeReader(ser_dev=ser_dev, send_command_sleep=0)
+        ser_dev = Sds011SerialEmulator()
+        reader = ActiveModeReader(ser_dev=ser_dev, send_command_sleep=0)
         reader.set_working_period(0)
         ser_dev.read(10)
 
@@ -275,11 +274,11 @@ class TestQueryModeReader:
     @pytest.fixture
     def reader(self):
         # If you want to run these tests an integration you can replace the emulator here with a real serial device.
-        ser_dev = serial.Serial("/dev/ttyUSB0", timeout=2, baudrate=9600)
-        reader = QueryModeReader(ser_dev=ser_dev)
+        # ser_dev = serial.Serial("/dev/ttyUSB0", timeout=2, baudrate=9600)
+        # reader = QueryModeReader(ser_dev=ser_dev)
 
-        # ser_dev = Sds011SerialEmulator()
-        # reader = QueryModeReader(ser_dev=ser_dev, send_command_sleep=0)
+        ser_dev = Sds011SerialEmulator()
+        reader = QueryModeReader(ser_dev=ser_dev, send_command_sleep=0)
         reader.set_working_period(0)
 
         yield reader
