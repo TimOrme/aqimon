@@ -17,9 +17,10 @@ class Config:
 
     # Nova PM properties
     usb_path: str
-    usb_sleep_time_sec: int
+    sleep_sec_between_reads: int
     sample_count_per_read: int
     warm_up_sec: int
+    command_wait_time: int
 
     # EPA Properties
     epa_lookback_minutes: int
@@ -36,8 +37,9 @@ DEFAULT_CONFIG = Config(
     epa_lookback_minutes=60 * 8,  # 8 hours
     reader_type="NOVAPM",
     usb_path="/dev/ttyUSB0",
-    usb_sleep_time_sec=5,
+    sleep_sec_between_reads=5,
     warm_up_sec=15,
+    command_wait_time=1,
     sample_count_per_read=5,
     server_port=8000,
     server_host="0.0.0.0",
@@ -52,8 +54,11 @@ def get_config_from_env() -> Config:
         retention_minutes=int(os.environ.get("AQIMON_RETENTION_MINUTES", DEFAULT_CONFIG.retention_minutes)),
         reader_type=os.environ.get("AQIMON_READER_TYPE", DEFAULT_CONFIG.reader_type),
         usb_path=os.environ.get("AQIMON_USB_PATH", DEFAULT_CONFIG.usb_path),
-        usb_sleep_time_sec=int(os.environ.get("AQIMON_USB_SLEEP_TIME_SEC", DEFAULT_CONFIG.usb_sleep_time_sec)),
+        sleep_sec_between_reads=int(
+            os.environ.get("AQIMON_SLEEP_SEC_BETWEEN_READS", DEFAULT_CONFIG.sleep_sec_between_reads)
+        ),
         warm_up_sec=int(os.environ.get("AQIMON_WARM_UP_SEC", DEFAULT_CONFIG.warm_up_sec)),
+        command_wait_time=int(os.environ.get("AQIMON_COMMAND_WAIT_TIME", DEFAULT_CONFIG.command_wait_time)),
         sample_count_per_read=int(os.environ.get("AQIMON_SAMPLE_COUNT_PER_READ", DEFAULT_CONFIG.sample_count_per_read)),
         server_port=int(os.environ.get("AQIMON_SERVER_PORT", DEFAULT_CONFIG.server_port)),
         server_host=os.environ.get("AQIMON_SERVER_HOST", DEFAULT_CONFIG.server_host),
