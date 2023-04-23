@@ -81,6 +81,7 @@ Aqimon uses environment variables for configuration, but all values should ship 
 | **AQIMON_SAMPLE_COUNT_PER_READ**   | 5                   | The number of reads to take with each sample.                                                                                     |
 | **AQIMON_WARM_UP_SEC**             | 15                  | The number of seconds to wait for the device to warm up before reading.                                                           |
 | **AQIMON_COMMAND_WAIT_TIME**       | 1                   | The number of seconds to wait for the device respond to a command.                                                                |
+| **AQIMON_EPA_LOOKBACK_MIN**        | 60*8                | The number of minutes to look back at read data to calculate the EPA AQI.                                                         |
 | **AQIMON_SERVER_PORT**             | 8000                | The port to run the server on.                                                                                                    |
 | **AQIMON_SERVER_HOST**             | 0.0.0.0             | The host to run the server on.                                                                                                    |
 
