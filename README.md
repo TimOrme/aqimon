@@ -70,17 +70,19 @@ sudo systemctl start aqimon
 
 Aqimon uses environment variables for configuration, but all values should ship with sensible defaults.
 
-| Variable                         | Default             | Description                                                                                                                       |
-|----------------------------------|---------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| **AQIMON_DB_PATH**               | ~/.aqimon/db.sqlite | The path to the database file, where read information is stored. It should be an absolute path; user home expansion is supported. |
-| **AQIMON_POLL_FREQUENCY_SEC**    | 900 (15 minutes)    | Sets how frequently to read from the device, in seconds.                                                                          |
-| **AQIMON_RETENTION_MINUTES**     | 10080 (1 week)      | Sets how long data will be kept in the database, in minutes.                                                                      |
-| **AQIMON_READER_TYPE**           | NOVAPM              | The reader type to use, either NOVAPM or MOCK.                                                                                    |
-| **AQIMON_USB_PATH**              | /dev/ttyUSB0        | The path to the USB device for the sensor.                                                                                        |
-| **AQIMON_SLEEP_TIME_SEC**        | 5                   | The number of seconds to wait for between each read in a set of reads.                                                            |
-| **AQIMON_SAMPLE_COUNT_PER_READ** | 5                   | The number of reads to take with each sample.                                                                                     |
-| **AQIMON_SERVER_PORT**           | 8000                | The port to run the server on.                                                                                                    |
-| **AQIMON_SERVER_HOST**           | 0.0.0.0             | The host to run the server on.                                                                                                    |
+| Variable                           | Default             | Description                                                                                                                       |
+|------------------------------------|---------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| **AQIMON_DB_PATH**                 | ~/.aqimon/db.sqlite | The path to the database file, where read information is stored. It should be an absolute path; user home expansion is supported. |
+| **AQIMON_POLL_FREQUENCY_SEC**      | 900 (15 minutes)    | Sets how frequently to read from the device, in seconds.                                                                          |
+| **AQIMON_RETENTION_MINUTES**       | 10080 (1 week)      | Sets how long data will be kept in the database, in minutes.                                                                      |
+| **AQIMON_READER_TYPE**             | NOVAPM              | The reader type to use, either NOVAPM or MOCK.                                                                                    |
+| **AQIMON_USB_PATH**                | /dev/ttyUSB0        | The path to the USB device for the sensor.                                                                                        |
+| **AQIMON_SLEEP_SEC_BETWEEN_READS** | 5                   | The number of seconds to wait for between each read in a set of reads.                                                            |
+| **AQIMON_SAMPLE_COUNT_PER_READ**   | 5                   | The number of reads to take with each sample.                                                                                     |
+| **AQIMON_WARM_UP_SEC**             | 15                  | The number of seconds to wait for the device to warm up before reading.                                                           |
+| **AQIMON_COMMAND_WAIT_TIME**       | 1                   | The number of seconds to wait for the device respond to a command.                                                                |
+| **AQIMON_SERVER_PORT**             | 8000                | The port to run the server on.                                                                                                    |
+| **AQIMON_SERVER_HOST**             | 0.0.0.0             | The host to run the server on.                                                                                                    |
 
 ## Contributing
 

@@ -84,7 +84,8 @@ def build_reader() -> ScheduledReader:
                 ser_dev=conf.usb_path,
                 warm_up_secs=conf.warm_up_sec,
                 iterations=conf.sample_count_per_read,
-                sleep_time=conf.usb_sleep_time_sec,
+                sleep_time=conf.sleep_sec_between_reads,
+                command_wait_time=conf.command_wait_time,
             ),
         )
     else:

@@ -15,13 +15,18 @@ class OpinionatedReader:
     """NOVA PM SDS011 Reader."""
 
     def __init__(
-        self, ser_dev: Union[str, serial.Serial], warm_up_secs: int = 15, iterations: int = 5, sleep_time: int = 3
+        self,
+        ser_dev: Union[str, serial.Serial],
+        warm_up_secs: int = 15,
+        iterations: int = 5,
+        sleep_time: int = 3,
+        command_wait_time: int = 15,
     ):
         """Create the device."""
         if isinstance(ser_dev, str):
             ser_dev = serial.Serial(ser_dev, timeout=2)
 
-        self.reader = QueryModeReader(ser_dev=ser_dev)
+        self.reader = QueryModeReader(ser_dev=ser_dev, send_command_sleep=command_wait_time)
 
         # Initial the reader to be in the mode we want.
         self.reader.wake()
