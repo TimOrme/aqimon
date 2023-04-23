@@ -12,6 +12,8 @@ jobs:
         uses: extractions/setup-just@v1
       - name: Setup Elm
         uses: jorelali/setup-elm@v5
+      - name: Install poetry
+        uses: Gr1N/setup-poetry@v8
       - name: Install dev dependencies
         run: poetry install --no-root
         env:
