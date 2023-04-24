@@ -208,6 +208,21 @@ async def test_get_averaged_reads(database_conn):
 
 
 @pytest.mark.asyncio
+async def test_get_averaged_reads_rounding(database_conn):
+    # Add reads every two hours
+    current_time = datetime(2020, 1, 1, 12, 0, 0)
+    lookback_to = current_time - timedelta(hours=8)
+    await database.add_read(database_conn, current_time - timedelta(hours=2), pm10=2, pm25=2)
+    await database.add_read(database_conn, current_time - timedelta(hours=4), pm10=4, pm25=3)
+    await database.add_read(database_conn, current_time - timedelta(hours=6), pm10=4, pm25=3)
+
+    result = await database.get_averaged_reads(database_conn, lookback_to)
+    assert result.count == 3
+    assert result.avg_pm10 == 3.33
+    assert result.avg_pm25 == 2.67
+
+
+@pytest.mark.asyncio
 async def test_get_averaged_reads_looks_past(database_conn):
     current_time = datetime(2020, 1, 1, 12, 0, 0)
     lookback_to = current_time - timedelta(hours=8)
