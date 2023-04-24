@@ -122,7 +122,9 @@ async def get_averaged_reads(dbconn: databases.Database, lookback_to: datetime) 
     lookback = int(lookback_to.timestamp())
     result = await dbconn.fetch_one(
         "SELECT "
-        "AVG(pm25) as avg_pm25, AVG(pm10) as avg_pm10, COUNT(*) as count, MIN(event_time) as oldest_time "
+        "ROUND(AVG(pm25), 2) as avg_pm25, ROUND(AVG(pm10), 2) as avg_pm10, "
+        "COUNT(*) as count, "
+        "MIN(event_time) as oldest_time "
         "FROM read_log "
         "WHERE (event_time >= :lookback) OR "
         "(event_time = (SELECT MAX(event_time) FROM read_log WHERE event_time <= :lookback)) ORDER BY event_time ASC",
