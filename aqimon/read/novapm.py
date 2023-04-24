@@ -54,7 +54,7 @@ class OpinionatedReader:
                 pm10_reads.append(result.pm10)
             self.reader.sleep()
             self.state = ReaderState(ReaderStatus.IDLE, None)
-            return AqiRead(pmtwofive=mean(pm25_reads), pmten=mean(pm10_reads))
+            return AqiRead(pmtwofive=round(mean(pm25_reads), 2), pmten=round(mean(pm10_reads), 2))
         except Exception as e:
             self.state = ReaderState(ReaderStatus.ERRORING, e)
             self.reader.sleep()
