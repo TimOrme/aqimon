@@ -15,14 +15,24 @@ class Pollutant(Enum):
     PM_10 = 1
 
 
+class EpaLevels(Enum):
+    """Enum of EPA levels."""
+
+    GOOD = 0
+    MODERATE = 1
+    UNHEALTHY_FOR_SENSITIVE = 2
+    UNHEALTHY = 3
+    VERY_UNHEALTHY = 4
+    HAZARDOUS = 5
+
+
 AQI: List[Tuple[int, int]] = [
     (0, 50),
     (51, 100),
     (101, 150),
     (151, 200),
     (201, 300),
-    (301, 400),
-    (401, 500),
+    (301, 500),
 ]
 PM_25: List[Tuple[float, float]] = [
     (0.0, 12.0),
@@ -63,11 +73,11 @@ class EpaAqi:
     responsible_pollutant: Pollutant
 
 
-def get_level_from_pm25(pm25: float) -> int:
+def get_epa_level(epa_reading: float) -> EpaLevels:
     """Get the EPA level from a PM25 reading."""
-    for i, pair in enumerate(PM_25):
-        if pair[0] <= pm25 <= pair[1]:
-            return i
+    for i, pair in enumerate(AQI):
+        if pair[0] <= epa_reading <= pair[1]:
+            return EpaLevels(i)
     raise ValueError("Invalid PM value")
 
 

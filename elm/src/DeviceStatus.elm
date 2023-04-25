@@ -36,22 +36,19 @@ Includes general status, time to next read, and exception info if applicable.
 getDeviceInfo : DeviceInfo -> Html msg
 getDeviceInfo deviceInfo =
     Grid.container []
-        [ Grid.row [ Row.attrs [ class "align-items-center" ] ]
-            [ Grid.col [ Col.attrs [ style "max-width" "64px", style "margin-right" "1em" ] ] [ img [ src (deviceStatusImage deviceInfo.state) ] [] ]
-            , Grid.col []
-                [ Grid.row []
-                    [ Grid.col []
-                        [ h5 [ style "color" (deviceStatusColor deviceInfo.state) ] [ text (deviceStatusToString deviceInfo.state) ] ]
-                    ]
-                , Grid.row []
-                    [ Grid.col [] [ text (deviceInfo.lastException |> Maybe.withDefault "") ] ]
-                , htmlIf
-                    (Grid.row []
-                        [ Grid.col [] [ text ("Next read in: " ++ (Maybe.map2 formatDuration deviceInfo.currentTime deviceInfo.nextSchedule |> Maybe.withDefault "")) ] ]
-                    )
-                    (shouldShowTimer deviceInfo.state)
+        [ Grid.row [ Row.attrs [] ]
+            [ Grid.col [ Col.attrs [ class "text-center", style "padding" "2em" ] ] [ img [ src (deviceStatusImage deviceInfo.state) ] [] ] ]
+        , Grid.row []
+            [ Grid.col [ Col.attrs [ style "text-align" "center" ] ] [ h5 [ style "color" (deviceStatusColor deviceInfo.state) ] [ text (deviceStatusToString deviceInfo.state) ] ] ]
+        , Grid.row []
+            [ Grid.col [ Col.attrs [ style "text-align" "center" ] ] [ text (deviceInfo.lastException |> Maybe.withDefault "") ] ]
+        , htmlIf
+            (Grid.row []
+                [ Grid.col [ Col.attrs [ style "text-align" "center" ] ]
+                    [ text ("Next read in: " ++ (Maybe.map2 formatDuration deviceInfo.currentTime deviceInfo.nextSchedule |> Maybe.withDefault "")) ]
                 ]
-            ]
+            )
+            (shouldShowTimer deviceInfo.state)
         ]
 
 

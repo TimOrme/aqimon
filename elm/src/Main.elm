@@ -2,16 +2,20 @@ module Main exposing (..)
 
 import Bootstrap.Button as Button
 import Bootstrap.ButtonGroup as ButtonGroup
+import Bootstrap.Form.Select as Select
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
 import Bootstrap.Text as Text
 import Browser
 import Chart.Item as CI
+import CurrentReads as CR exposing (..)
 import DeviceStatus as DS exposing (..)
+import EpaCommon as EC exposing (..)
+import EpaLevel as EL exposing (..)
 import Graph as G exposing (..)
 import Html exposing (Attribute, Html, div, h1, h2, h5, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, style, value)
 import Http
 import Json.Decode exposing (Decoder, andThen, fail, field, float, int, list, map2, map3, map4, maybe, string, succeed)
 import Task
@@ -42,14 +46,18 @@ type WindowDuration
     | Week
 
 
+type VisibleGraph
+    = Epa
+    | ParticleMatter
+
+
 {-| Lastest data point
 -}
 type alias LatestData =
-    { readTime : Float
-    , pm25 : Float
-    , pm10 : Float
-    , epaTime : Float
-    , epa : Float
+    { pm25 : Maybe Float
+    , pm10 : Maybe Float
+    , epa : Maybe Float
+    , epaLevel : Maybe EpaLevel
     }
 
 
@@ -101,6 +109,7 @@ type alias Model =
     , hoveringReads : List (CI.One ReadData CI.Dot)
     , hoveringEpas : List (CI.One EpaData CI.Dot)
     , errorData : ErrorData
+    , currentGraph : VisibleGraph
     }
 
 
@@ -111,7 +120,7 @@ init _ =
     ( { currentTime = Nothing
       , lastStatusPoll = Nothing
       , readerState = { state = Idle, lastException = Nothing, currentTime = Nothing, nextSchedule = Nothing }
-      , lastReads = { readTime = 0, pm25 = 0.0, pm10 = 0.0, epaTime = 0, epa = 0.0 }
+      , lastReads = { pm25 = Nothing, pm10 = Nothing, epa = Nothing, epaLevel = Nothing }
       , allReads = []
       , allEpas = []
       , windowDuration = Hour
@@ -119,8 +128,9 @@ init _ =
       , hoveringReads = []
       , hoveringEpas = []
       , errorData = { hasError = False, errorTitle = "", errorMessage = "" }
+      , currentGraph = Epa
       }
-    , Task.perform FetchData Time.now
+    , Cmd.batch [ Task.perform FetchData Time.now, Task.perform FetchLatest Time.now ]
     )
 
 
@@ -149,6 +159,16 @@ getData windowDuration =
         }
 
 
+{-| Get latest read data.
+-}
+getLatest : Cmd Msg
+getLatest =
+    Http.get
+        { url = "/api/latest_data"
+        , expect = Http.expectJson GotLatest latestDataDecoder
+        }
+
+
 getStatus : Cmd Msg
 getStatus =
     Http.get
@@ -165,13 +185,16 @@ getStatus =
 -}
 type Msg
     = FetchData Posix
+    | FetchLatest Posix
     | FetchStatus Posix
     | GotData (Result Http.Error AllData)
+    | GotLatest (Result Http.Error LatestData)
     | GotStatus (Result Http.Error DeviceInfoResponse)
     | ChangeWindow WindowDuration
     | OnReadHover (List (CI.One ReadData CI.Dot))
     | OnEpaHover (List (CI.One EpaData CI.Dot))
     | Tick Posix
+    | ChangeGraphView String
 
 
 {-| Core update handler.
@@ -183,7 +206,7 @@ update msg model =
             -- On Data received
             case result of
                 Ok data ->
-                    ( { model | lastReads = getLastListItem data, allReads = data.reads, allEpas = data.epas, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
+                    ( { model | allReads = data.reads, allEpas = data.epas, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
 
                 Err e ->
                     ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve read data", errorMessage = errorToString e } }, Cmd.none )
@@ -191,6 +214,17 @@ update msg model =
         FetchData newTime ->
             -- Data requested
             ( { model | currentTime = Just newTime }, getData model.windowDuration )
+
+        GotLatest result ->
+            case result of
+                Ok data ->
+                    ( { model | lastReads = data, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
+
+                Err e ->
+                    ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve latest data", errorMessage = errorToString e } }, Cmd.none )
+
+        FetchLatest newTime ->
+            ( { model | currentTime = Just newTime }, getLatest )
 
         GotStatus result ->
             case result of
@@ -241,6 +275,17 @@ update msg model =
             in
             ( { model | currentTime = Just newTime, readerState = updatedReaderState }, cmd )
 
+        ChangeGraphView newView ->
+            let
+                newGraph =
+                    if newView == "pm" then
+                        ParticleMatter
+
+                    else
+                        Epa
+            in
+            ( { model | currentGraph = newGraph }, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -250,7 +295,7 @@ update msg model =
 -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch [ Time.every 5000 FetchData, Time.every 500 Tick ]
+    Sub.batch [ Time.every 5000 FetchData, Time.every 5000 FetchLatest, Time.every 500 Tick ]
 
 
 
@@ -264,36 +309,44 @@ view : Model -> Html Msg
 view model =
     div []
         [ Grid.container [ style "margin-bottom" ".5em" ]
-            [ Grid.row [ Row.attrs [ class "bg-info", style "padding" "1em" ] ]
+            [ Grid.row [ Row.attrs [ style "padding" "1em" ] ]
                 [ Grid.col []
                     [ h1
-                        [ class "text-center"
-                        ]
+                        []
                         [ text "AQI Monitor" ]
                     ]
-                , Grid.col [] [ DS.getDeviceInfo model.readerState ]
                 ]
-            ]
-        , htmlIf
-            (Grid.container []
-                [ Grid.row []
+            , Grid.row [ Row.attrs [ style "padding" "1em" ] ]
+                [ Grid.col [ Col.attrs [ style "background-color" "#D9D9D9", style "margin" "1em" ] ]
+                    [ CR.getCurrentReads { epaLevel = model.lastReads.epaLevel, lastEpaRead = model.lastReads.epa, lastPm25 = model.lastReads.pm25, lastPm10 = model.lastReads.pm10 } ]
+                , Grid.col [ Col.attrs [ class "align-items-center", class "d-flex", style "background-color" "#D9D9D9", style "margin" "1em" ] ]
+                    [ EL.getEpaLevel model.lastReads.epaLevel ]
+                , Grid.col [ Col.attrs [ style "background-color" "#D9D9D9", style "margin" "1em" ] ]
+                    [ DS.getDeviceInfo model.readerState ]
+                ]
+            , htmlIf
+                (Grid.row []
                     [ Grid.col [ Col.attrs [ class "alert", class "alert-danger" ] ]
                         [ h5 [] [ text model.errorData.errorTitle ]
                         , text model.errorData.errorMessage
                         ]
                     ]
-                ]
-            )
-            model.errorData.hasError
-        , Grid.container []
-            [ Grid.row [ Row.centerMd ]
-                [ Grid.col [ Col.lg3 ] [ viewBigNumber model.lastReads.epa "EPA" ]
-                , Grid.col [ Col.lg3 ] [ viewBigNumber model.lastReads.pm25 "PM2.5" ]
-                , Grid.col [ Col.lg3 ] [ viewBigNumber model.lastReads.pm10 "PM10" ]
-                ]
-            , Grid.row [ Row.attrs [ style "padding-top" "1em", class "justify-content-end" ] ]
-                [ Grid.col [ Col.lg3 ]
-                    [ ButtonGroup.radioButtonGroup []
+                )
+                model.errorData.hasError
+            , Grid.row [ Row.attrs [ style "padding" "1em" ] ]
+                [ Grid.col []
+                    [ h2
+                        []
+                        [ text "History" ]
+                    ]
+                , Grid.col []
+                    [ Select.select [ Select.onChange ChangeGraphView ]
+                        [ Select.item [ value "epa" ] [ text "EPA AQI" ]
+                        , Select.item [ value "pm" ] [ text "Particulate Matter" ]
+                        ]
+                    ]
+                , Grid.col [ Col.lg3 ]
+                    [ ButtonGroup.radioButtonGroup [ ButtonGroup.attrs [] ]
                         [ getSelector All "All" model.windowDuration
                         , getSelector Hour "Hour" model.windowDuration
                         , getSelector Day "Day" model.windowDuration
@@ -301,20 +354,24 @@ view model =
                         ]
                     ]
                 ]
-            , Grid.row [] [ Grid.col [] [ h2 [] [ text "EPA AQI" ] ] ]
-            , Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
-                [ Grid.col [ Col.lg ]
-                    [ div [ style "height" "400px" ]
-                        [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas } OnEpaHover ]
+            , htmlIf
+                (Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
+                    [ Grid.col [ Col.lg ]
+                        [ div [ style "height" "400px" ]
+                            [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas } OnEpaHover ]
+                        ]
                     ]
-                ]
-            , Grid.row [] [ Grid.col [] [ h2 [] [ text "PM2.5/PM10 Reads" ] ] ]
-            , Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
-                [ Grid.col [ Col.lg ]
-                    [ div [ style "height" "400px" ]
-                        [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads } OnReadHover ]
+                )
+                (model.currentGraph == Epa)
+            , htmlIf
+                (Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
+                    [ Grid.col [ Col.lg ]
+                        [ div [ style "height" "400px" ]
+                            [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads } OnReadHover ]
+                        ]
                     ]
-                ]
+                )
+                (model.currentGraph == ParticleMatter)
             ]
         ]
 
@@ -325,40 +382,8 @@ getSelector : WindowDuration -> String -> WindowDuration -> ButtonGroup.RadioBut
 getSelector windowDuration textDuration currentDuration =
     ButtonGroup.radioButton
         (windowDuration == currentDuration)
-        [ Button.outlinePrimary, Button.onClick <| ChangeWindow windowDuration ]
+        [ Button.outlineDark, Button.onClick <| ChangeWindow windowDuration ]
         [ text textDuration ]
-
-
-{-| Get a "big number" view for the headline.
--}
-viewBigNumber : Float -> String -> Html Msg
-viewBigNumber value numberType =
-    Grid.container [ style "background-clip" "border-box", style "border" "1px solid darkgray", style "padding" "0", style "border-radius" ".25rem" ]
-        [ Grid.row []
-            [ Grid.col
-                [ Col.textAlign Text.alignMdCenter ]
-                [ h1
-                    [ style "padding" ".5em"
-                    , style "margin" "0"
-                    , style "color" "white"
-                    , style "background-color" "lightblue"
-                    ]
-                    [ text (String.fromFloat value) ]
-                ]
-            ]
-        , Grid.row []
-            [ Grid.col
-                [ Col.textAlign Text.alignMdCenter ]
-                [ h5
-                    [ style "padding" ".25em"
-                    , style "margin" "0"
-                    , style "color" "darkblue"
-                    , style "background-color" "lightgray"
-                    ]
-                    [ text numberType ]
-                ]
-            ]
-        ]
 
 
 {-| Decoder function for JSON read data
@@ -389,6 +414,15 @@ allDataDecoder =
     map2 AllData
         (field "reads" readDataDecoder)
         (field "epas" epaDataDecoder)
+
+
+latestDataDecoder : Decoder LatestData
+latestDataDecoder =
+    map4 LatestData
+        (maybe (field "pm25" float))
+        (maybe (field "pm10" float))
+        (maybe (field "epa" float))
+        (maybe (field "level" epaLevelDecoder))
 
 
 type alias DeviceInfoResponse =
@@ -433,37 +467,35 @@ stateDecoder =
             )
 
 
-{-| Given a list of read data, retrieve the last item from that list.
-Useful for grabbing the most recent read from the device.
-If the list is empty, a read with all 0 values is returned.
-
-getLastListItem [
-{time = 1, epa = 1, pm25 = 1, pm 10 = 1},
-{time = 2, epa = 2, pm25 = 2, pm 10 = 2},
-{time = 3, epa = 3, pm25 = 3, pm 10 = 3},
-] = [{time = 3, epa = 3, pm25 = 3, pm 10 = 3}]
-
+{-| JSON decoder to convert a device state to its type.
 -}
-getLastListItem : AllData -> LatestData
-getLastListItem allData =
-    let
-        lastReads =
-            case List.head (List.reverse allData.reads) of
-                Just a ->
-                    a
+epaLevelDecoder : Decoder EpaLevel
+epaLevelDecoder =
+    string
+        |> andThen
+            (\str ->
+                case str of
+                    "HAZARDOUS" ->
+                        succeed Hazardous
 
-                Nothing ->
-                    { time = 0, pm25 = 0, pm10 = 0 }
+                    "VERY_UNHEALTHY" ->
+                        succeed VeryUnhealthy
 
-        lastEpas =
-            case List.head (List.reverse allData.epas) of
-                Just a ->
-                    a
+                    "UNHEALTHY" ->
+                        succeed Unhealthy
 
-                Nothing ->
-                    { time = 0, epa = 0 }
-    in
-    { readTime = lastReads.time, pm25 = lastReads.pm25, pm10 = lastReads.pm10, epaTime = lastEpas.time, epa = lastEpas.epa }
+                    "UNHEALTHY_FOR_SENSITIVE" ->
+                        succeed UnhealthyForSensitive
+
+                    "MODERATE" ->
+                        succeed Moderate
+
+                    "GOOD" ->
+                        succeed Good
+
+                    _ ->
+                        fail "Invalid Epa Level"
+            )
 
 
 {-| Convert HTTP error to a string.
