@@ -61,7 +61,7 @@ deviceStatusImage deviceStatus =
             "/static/images/loading.gif"
 
         WarmingUp ->
-            "/static/images/loading.gif"
+            "/static/images/warmingup.gif"
 
         Idle ->
             "/static/images/idle.png"
