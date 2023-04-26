@@ -50,13 +50,14 @@ Accepts a model of graph data, and an event that occurs on graph hover.
 getReadChart : GraphReadModel -> (List (CI.One GraphReadData CI.Dot) -> msg) -> Html msg
 getReadChart graphModel onHover =
     C.chart
-        [ CA.height 300
-        , CA.width 1000
+        [ CA.height 200
+        , CA.width 800
+        , CA.margin { left = 40, top = 0, right = 20, bottom = 0 }
         , CE.onMouseMove onHover (CE.getNearest CI.dots)
         , CE.onMouseLeave (onHover [])
         ]
-        [ C.xLabels [ CA.moveDown 25, CA.withGrid, CA.rotate 60, CA.format formatTime ]
-        , C.yLabels [ CA.withGrid ]
+        [ C.xLabels [ CA.fontSize 10, CA.withGrid, CA.format formatTime ]
+        , C.yLabels [ CA.fontSize 10, CA.withGrid ]
         , C.series .time
             [ C.interpolated .pm25 [ CA.monotone, CA.color CA.yellow ] [ CA.circle, CA.size 3 ] |> C.named "PM2.5"
             , C.interpolated .pm10 [ CA.monotone, CA.color CA.red ] [ CA.circle, CA.size 3 ] |> C.named "PM10"
@@ -88,13 +89,14 @@ Accepts a model of graph data, and an event that occurs on graph hover.
 getEpaChart : GraphEpaModel -> (List (CI.One GraphEpaData CI.Dot) -> msg) -> Html msg
 getEpaChart graphModel onHover =
     C.chart
-        [ CA.height 300
-        , CA.width 1000
+        [ CA.height 200
+        , CA.width 800
+        , CA.margin { left = 40, top = 0, right = 20, bottom = 0 }
         , CE.onMouseMove onHover (CE.getNearest CI.dots)
         , CE.onMouseLeave (onHover [])
         ]
-        [ C.xLabels [ CA.moveDown 25, CA.withGrid, CA.rotate 60, CA.format formatTime ]
-        , C.yLabels [ CA.withGrid ]
+        [ C.xLabels [ CA.fontSize 10, CA.withGrid, CA.format formatTime ]
+        , C.yLabels [ CA.fontSize 10, CA.withGrid ]
         , C.series .time
             [ C.interpolated .epa [ CA.monotone, CA.color CA.blue ] [ CA.circle, CA.size 3 ] |> C.named "EPA"
             ]

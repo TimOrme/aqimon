@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from .database import (
     get_all_reads,
     get_all_epa_aqis,
+    get_latest_read,
+    get_latest_epa_aqi,
     add_read,
     add_epa_read,
     get_averaged_reads,
@@ -213,6 +215,21 @@ async def all_data(
         all_epas = await get_all_epa_aqis(database, None)
     all_json = convert_all_to_view_dict(all_reads, all_epas)
     return all_json
+
+
+@app.get("/api/latest_data")
+async def latest_data(
+    database: databases.Database = Depends(get_database),
+):
+    """Retrieve most recent reads."""
+    latest_reads = await get_latest_read(database)
+    latest_epa = await get_latest_epa_aqi(database)
+    return {
+        "epa": latest_epa.epa_aqi,
+        "level": aqi_common.get_epa_level(latest_epa.epa_aqi).name,
+        "pm25": latest_reads.pm25,
+        "pm10": latest_reads.pm10,
+    }
 
 
 @app.get("/api/status")
