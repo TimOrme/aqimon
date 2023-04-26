@@ -11,11 +11,12 @@ from aqimon.read import AqiRead, ReaderState, ReaderStatus
 class MockReader:
     """Mock reader class."""
 
-    def __init__(self, fake_sleep_secs=5, raise_error_odds=50):
+    def __init__(self, fake_sleep_secs=5, raise_error_odds=50, warm_up_secs=5):
         """Create a mock reader."""
         self.state = ReaderState(ReaderStatus.IDLE, None)
         self.fake_sleep_secs = fake_sleep_secs
         self.raise_error_odds = raise_error_odds
+        self.warm_up_secs = warm_up_secs
 
     async def read(self) -> AqiRead:
         """Read from the 'device'.
@@ -25,6 +26,8 @@ class MockReader:
         Also, randomly fails some percentage of the time.
         """
         try:
+            self.state = ReaderState(ReaderStatus.WARM_UP, None)
+            await asyncio.sleep(self.warm_up_secs)
             self.state = ReaderState(ReaderStatus.READING, None)
             raise_error_roll = random.randint(0, 100)
             if raise_error_roll < self.raise_error_odds:
