@@ -7,7 +7,7 @@ import asyncio
 from . import AqiRead, ReaderState, ReaderStatus
 import serial
 from typing import Union
-from .sds011 import QueryModeReader
+from sds011lib import SDS011QueryReader
 from statistics import mean
 
 
@@ -26,7 +26,7 @@ class OpinionatedReader:
         if isinstance(ser_dev, str):
             ser_dev = serial.Serial(ser_dev, timeout=2)
 
-        self.reader = QueryModeReader(ser_dev=ser_dev, send_command_sleep=command_wait_time)
+        self.reader = SDS011QueryReader(ser_dev=ser_dev, send_command_sleep=command_wait_time)
 
         # Initial the reader to be in the mode we want.
         self.reader.wake()
