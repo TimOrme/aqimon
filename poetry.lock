@@ -558,14 +558,14 @@ files = [
 
 [[package]]
 name = "sds011lib"
-version = "0.2.0"
+version = "0.2.1"
 description = "SDS011 Library"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "sds011lib-0.2.0-py3-none-any.whl", hash = "sha256:1d0f268ab2f52e60dcb382af57a4b0d7eaa234e1e3a07e1a0bbeae7612f8e259"},
-    {file = "sds011lib-0.2.0.tar.gz", hash = "sha256:3dcb0005e44eee6fde95055c8361098faf17199f2645f97bb7b0f22398f73d7a"},
+    {file = "sds011lib-0.2.1-py3-none-any.whl", hash = "sha256:ffe5d1b3da85e00c925ad78de0b9ce291d7d98c51715c30ea22d91fc56cbbcea"},
+    {file = "sds011lib-0.2.1.tar.gz", hash = "sha256:3f08aab3feeac62d596ffe0820bc760efd5c699f5e673fcf977729751352f6cc"},
 ]
 
 [package.dependencies]
