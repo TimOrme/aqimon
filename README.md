@@ -3,6 +3,7 @@
 A simple Air Quality Index monitor, designed to work on the Raspberry Pi with the SDS011 Nova PM Sensor.
 
 - [AQIMON](#aqimon)
+  - [Screenshot](#screenshot) 
   - [Installation](#installation)
     - [Pre-Requisites](#pre-requisites)
     - [Install](#install)
@@ -14,6 +15,10 @@ A simple Air Quality Index monitor, designed to work on the Raspberry Pi with th
     - [Quickstart](#quickstart)
     - [Using the Mock Reader](#using-the-mock-reader)
     - [Submitting a PR](#submitting-a-pr)
+
+## Screenshot
+
+![Screenshot](screenshot.png)
 
 ## Installation
 
