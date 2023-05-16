@@ -558,14 +558,14 @@ files = [
 
 [[package]]
 name = "sds011lib"
-version = "0.3.1"
+version = "0.4.0"
 description = "SDS011 Library"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "sds011lib-0.3.1-py3-none-any.whl", hash = "sha256:0a30fdb5a8556381ecfd8613c1627db83c39fd79cbc9101d6a8598967d1270dd"},
-    {file = "sds011lib-0.3.1.tar.gz", hash = "sha256:bd96b3008f5cb68a803ce0b7dc3ccc590b2c16866b81d5f580aab95ca26b7962"},
+    {file = "sds011lib-0.4.0-py3-none-any.whl", hash = "sha256:76ab2ee0c982fcfe4133935e9460a22a02bec080e0139609308c7a9e05d4bcd8"},
+    {file = "sds011lib-0.4.0.tar.gz", hash = "sha256:5a25cd95ab318715090d06bb84c3388faeb67a17e92283befb7ab3ce1678bb77"},
 ]
 
 [package.dependencies]
@@ -723,4 +723,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "74d381c3d0a0dfe1322b5cd819a2abdc76c5fa0cd7bc33b85bc3ad7309b7c4f2"
+content-hash = "562ea45c8a3bff465c28c811f06bbf1f05f7d260cf0575535ef2ff751e14aa25"

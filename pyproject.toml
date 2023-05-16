@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aqimon"
-version = "0.5.0"
+version = "0.5.1"
 description = "Air Quality Index Monitor"
 authors = ["Tim Orme"]
 readme = "README.md"
@@ -13,7 +13,7 @@ pyserial = "^3.5"
 uvicorn = "^0.21.0"
 databases = {extras = ["aiosqlite"], version = "^0.7.0"}
 fastapi-utils = "^0.2.1"
-sds011lib = "^0.3.0"
+sds011lib = "^0.4.0"
 
 
 [tool.poetry.group.dev.dependencies]
