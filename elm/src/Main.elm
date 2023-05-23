@@ -6,7 +6,6 @@ import Bootstrap.Form.Select as Select
 import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
-import Bootstrap.Text as Text
 import Browser
 import Chart.Item as CI
 import CurrentReads as CR exposing (..)
@@ -14,8 +13,8 @@ import DeviceStatus as DS exposing (..)
 import EpaCommon as EC exposing (..)
 import EpaLevel as EL exposing (..)
 import Graph as G exposing (..)
-import Html exposing (Attribute, Html, div, h1, h2, h5, text)
-import Html.Attributes exposing (class, style, value)
+import Html exposing (Attribute, Html, div, h1, h2, h5, img, text)
+import Html.Attributes exposing (class, height, src, style, value, width)
 import Http
 import Json.Decode exposing (Decoder, andThen, fail, field, float, int, list, map2, map3, map4, maybe, string, succeed)
 import Task
@@ -312,8 +311,10 @@ view model =
             [ Grid.row [ Row.attrs [ style "padding" "1em" ] ]
                 [ Grid.col []
                     [ h1
-                        []
-                        [ text "AQI Monitor" ]
+                        [ class "d-flex", class "align-items-center" ]
+                        [ img [ src "/static/images/aqimon.png", style "margin-right" "0.5em", width 75, height 75, class "d-inline-block", class "align-text-top" ] []
+                        , text "AQI Monitor"
+                        ]
                     ]
                 ]
             , Grid.row [ Row.attrs [ style "padding" "1em" ] ]

@@ -1,4 +1,4 @@
-# AQIMON
+# ![AQIMON](header.png) 
 
 A simple Air Quality Index monitor, designed to work on the Raspberry Pi with the SDS011 Nova PM Sensor.
 
