@@ -121,6 +121,8 @@ getEpaChart graphModel onHover =
         ]
 
 
+{-| Get the tooltip for an EPA AQI data point.
+-}
 getEpaToolTip : CI.One GraphEpaData CI.Dot -> Zone -> List (Html msg)
 getEpaToolTip item timeZone =
     let
@@ -146,6 +148,8 @@ getEpaToolTip item timeZone =
     ]
 
 
+{-| Get the tooltip for a particulate matter data point.
+-}
 getPmToolTip : CI.One GraphReadData CI.Dot -> Zone -> List (Html msg)
 getPmToolTip item timeZone =
     let
