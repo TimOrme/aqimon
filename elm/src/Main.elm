@@ -109,6 +109,7 @@ type alias Model =
     , hoveringEpas : List (CI.One EpaData CI.Dot)
     , errorData : ErrorData
     , currentGraph : VisibleGraph
+    , timeZone : Zone
     }
 
 
@@ -128,8 +129,9 @@ init _ =
       , hoveringEpas = []
       , errorData = { hasError = False, errorTitle = "", errorMessage = "" }
       , currentGraph = Epa
+      , timeZone = utc
       }
-    , Cmd.batch [ Task.perform FetchData Time.now, Task.perform FetchLatest Time.now ]
+    , Cmd.batch [ Task.perform FetchData Time.now, Task.perform FetchLatest Time.now, Task.perform GetTimeZone Time.here ]
     )
 
 
@@ -186,6 +188,7 @@ type Msg
     = FetchData Posix
     | FetchLatest Posix
     | FetchStatus Posix
+    | GetTimeZone Zone
     | GotData (Result Http.Error AllData)
     | GotLatest (Result Http.Error LatestData)
     | GotStatus (Result Http.Error DeviceInfoResponse)
@@ -213,6 +216,9 @@ update msg model =
         FetchData newTime ->
             -- Data requested
             ( { model | currentTime = Just newTime }, getData model.windowDuration )
+
+        GetTimeZone timeZone ->
+            ( { model | timeZone = timeZone }, Cmd.none )
 
         GotLatest result ->
             case result of
@@ -359,7 +365,7 @@ view model =
                 (Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
                     [ Grid.col [ Col.lg ]
                         [ div [ style "height" "400px" ]
-                            [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas } OnEpaHover ]
+                            [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas, timeZone = model.timeZone } OnEpaHover ]
                         ]
                     ]
                 )
@@ -368,7 +374,7 @@ view model =
                 (Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
                     [ Grid.col [ Col.lg ]
                         [ div [ style "height" "400px" ]
-                            [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads } OnReadHover ]
+                            [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads, timeZone = model.timeZone } OnReadHover ]
                         ]
                     ]
                 )
