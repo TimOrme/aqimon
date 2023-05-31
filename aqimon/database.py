@@ -154,6 +154,11 @@ async def clean_old(dbconn: databases.Database, retention_minutes: int) -> None:
         values={"last_week_timestamp": last_week_timestamp},
     )
 
+    await dbconn.execute(
+        "DELETE FROM epa_aqi_log WHERE event_time < :last_week_timestamp",
+        values={"last_week_timestamp": last_week_timestamp},
+    )
+
 
 async def add_epa_read(
     dbconn: databases.Database,
