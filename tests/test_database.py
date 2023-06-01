@@ -245,9 +245,44 @@ async def test_clean_old(database_conn):
     current_time = datetime.now()
     await database.add_read(database_conn, current_time - timedelta(hours=2), pm10=1, pm25=2)
     await database.add_read(database_conn, current_time - timedelta(hours=4), pm10=2, pm25=3)
+
+    await database.add_epa_read(
+        database_conn,
+        current_time - timedelta(hours=2),
+        epa_aqi=1,
+        pollutant="test",
+        read_count=10,
+        oldest_read_time=datetime.now(),
+    )
+    await database.add_epa_read(
+        database_conn,
+        current_time - timedelta(hours=4),
+        epa_aqi=2,
+        pollutant="test",
+        read_count=10,
+        oldest_read_time=datetime.now(),
+    )
+
     # These should be deleted
     await database.add_read(database_conn, current_time - timedelta(hours=6), pm10=3, pm25=4)
     await database.add_read(database_conn, current_time - timedelta(hours=8), pm10=4, pm25=5)
+
+    await database.add_epa_read(
+        database_conn,
+        current_time - timedelta(hours=6),
+        epa_aqi=3,
+        pollutant="test",
+        read_count=10,
+        oldest_read_time=datetime.now(),
+    )
+    await database.add_epa_read(
+        database_conn,
+        current_time - timedelta(hours=8),
+        epa_aqi=4,
+        pollutant="test",
+        read_count=10,
+        oldest_read_time=datetime.now(),
+    )
 
     await database.clean_old(database_conn, retention_minutes=(60 * 4) + 30)
 
@@ -255,6 +290,11 @@ async def test_clean_old(database_conn):
     assert len(result) == 2
     assert result[0].event_time == (current_time - timedelta(hours=4)).replace(microsecond=0)
     assert result[1].event_time == (current_time - timedelta(hours=2)).replace(microsecond=0)
+
+    result2 = await database.get_all_epa_aqis(database_conn, lookback=None)
+    assert len(result2) == 2
+    assert result2[0].event_time == (current_time - timedelta(hours=4)).replace(microsecond=0)
+    assert result2[1].event_time == (current_time - timedelta(hours=2)).replace(microsecond=0)
 
 
 @pytest.mark.asyncio
