@@ -208,14 +208,14 @@ update msg model =
             -- On Data received
             case result of
                 Ok data ->
-                    ( { model | allReads = data.reads, allEpas = data.epas, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
+                    ( { model | allReads = data.reads, allEpas = data.epas, dataLoading = False, errorData = { hasError = False, errorTitle = "", errorMessage = "" } }, Cmd.none )
 
                 Err e ->
-                    ( { model | errorData = { hasError = True, errorTitle = "Failed to retrieve read data", errorMessage = errorToString e } }, Cmd.none )
+                    ( { model | dataLoading = False, errorData = { hasError = True, errorTitle = "Failed to retrieve read data", errorMessage = errorToString e } }, Cmd.none )
 
         FetchData newTime ->
             -- Data requested
-            ( { model | currentTime = Just newTime }, getData model.windowDuration )
+            ( { model | currentTime = Just newTime, dataLoading = True }, getData model.windowDuration )
 
         GetTimeZone timeZone ->
             ( { model | timeZone = timeZone }, Cmd.none )
@@ -365,7 +365,7 @@ view model =
                 (Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
                     [ Grid.col [ Col.lg ]
                         [ div [ style "height" "400px" ]
-                            [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas, timeZone = model.timeZone } OnEpaHover ]
+                            [ G.getEpaChart { graphData = model.allEpas, currentHover = model.hoveringEpas, timeZone = model.timeZone, isLoading = model.dataLoading } OnEpaHover ]
                         ]
                     ]
                 )
@@ -374,7 +374,7 @@ view model =
                 (Grid.row [ Row.attrs [ style "padding-top" "1em", style "padding-bottom" "3em" ], Row.centerMd ]
                     [ Grid.col [ Col.lg ]
                         [ div [ style "height" "400px" ]
-                            [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads, timeZone = model.timeZone } OnReadHover ]
+                            [ G.getReadChart { graphData = model.allReads, currentHover = model.hoveringReads, timeZone = model.timeZone, isLoading = model.dataLoading } OnReadHover ]
                         ]
                     ]
                 )

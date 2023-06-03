@@ -15,6 +15,7 @@ type alias GraphReadModel =
     { graphData : List GraphReadData
     , currentHover : List (CI.One GraphReadData CI.Dot)
     , timeZone : Zone
+    , isLoading : Bool
     }
 
 
@@ -24,6 +25,7 @@ type alias GraphEpaModel =
     { graphData : List GraphEpaData
     , currentHover : List (CI.One GraphEpaData CI.Dot)
     , timeZone : Zone
+    , isLoading : Bool
     }
 
 
@@ -80,6 +82,19 @@ getReadChart graphModel onHover =
             ]
             [ CA.fontSize 12 -- Change font size
             ]
+        , htmlIf
+            (C.htmlAt .max
+                .max
+                -50
+                0
+                [ style "border" "1px solid gray"
+                , style "padding" "5px"
+                , style "font-size" "0.75em"
+                , style "background" "white"
+                ]
+                [ text "Loading..." ]
+            )
+            graphModel.isLoading
         ]
 
 
@@ -118,6 +133,19 @@ getEpaChart graphModel onHover =
             ]
             [ CA.fontSize 12 -- Change font size
             ]
+        , htmlIf
+            (C.htmlAt .max
+                .max
+                -50
+                0
+                [ style "border" "1px solid gray"
+                , style "padding" "5px"
+                , style "font-size" "0.75em"
+                , style "background" "white"
+                ]
+                [ text "Loading..." ]
+            )
+            graphModel.isLoading
         ]
 
 
@@ -247,3 +275,12 @@ monthToString month =
 
         Dec ->
             "12"
+
+
+htmlIf : C.Element data msg -> Bool -> C.Element data msg
+htmlIf el cond =
+    if cond then
+        el
+
+    else
+        C.none
