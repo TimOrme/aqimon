@@ -3,7 +3,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi_utils.tasks import repeat_every
+from fastapi_utilities import repeat_every
 from starlette.responses import FileResponse
 import uvicorn
 import databases
