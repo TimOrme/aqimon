@@ -3,12 +3,10 @@ name = "aqimon"
 version = "0.6.0"
 description = "Air Quality Index Monitor"
 authors = [{ name = "Tim Orme" }]
-requires-python = ">=3.9,<4"
+requires-python = ">=3.11,<4"
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -20,7 +18,7 @@ dependencies = [
     "uvicorn>=0.21.0,<0.22",
     "databases[aiosqlite]>=0.7.0,<0.8",
     "fastapi-utils>=0.2.1,<0.3",
-    "sds011lib>=0.4.0,<0.5",
+    "sds011lib==0.5.*",
 ]
 
 [project.scripts]
