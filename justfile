@@ -3,7 +3,7 @@ build: install_deps compile_elm
 
 # Install dependencies for project
 install_deps:
-    poetry install --no-root
+    uv sync --no-install-project
 
 # Compile elm code for production
 compile_elm:
@@ -15,16 +15,16 @@ compile_elm_dev:
 
 # Lint code.
 lint:
-    black --check .
-    ruff check .
-    mypy .
+    uv run ruff format --check .
+    uv run ruff check .
+    uv run mypy .
     elm-format --validate elm/
 
 # Format code
 format:
-    black .
+    uv run ruff format .
     elm-format --yes elm/
 
 # Run tests
 test:
-    python -m pytest tests/
+    uv run pytest tests/

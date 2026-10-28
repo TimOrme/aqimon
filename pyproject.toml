@@ -1,35 +1,51 @@
-[tool.poetry]
+[project]
 name = "aqimon"
 version = "0.6.0"
 description = "Air Quality Index Monitor"
-authors = ["Tim Orme"]
+authors = [{ name = "Tim Orme" }]
+requires-python = ">=3.9,<4"
 readme = "README.md"
-include = ["aqimon/static/elm.js"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "fastapi>=0.92.0,<0.93",
+    "pyserial>=3.5,<4",
+    "uvicorn>=0.21.0,<0.22",
+    "databases[aiosqlite]>=0.7.0,<0.8",
+    "fastapi-utils>=0.2.1,<0.3",
+    "sds011lib>=0.4.0,<0.5",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-fastapi = "^0.92.0"
-pyserial = "^3.5"
-uvicorn = "^0.21.0"
-databases = {extras = ["aiosqlite"], version = "^0.7.0"}
-fastapi-utils = "^0.2.1"
-sds011lib = "^0.4.0"
-
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.0.256"
-black = "^23.1.0"
-mypy = "^1.1.1"
-pytest = "^7.3.1"
-pytest-asyncio = "^0.21.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
+[project.scripts]
 aqimon = "aqimon.server:start"
 aqimond = "aqimon.server:debug"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.0.256,<0.0.257",
+    "black>=23.1.0,<24",
+    "mypy>=1.1.1,<2",
+    "pytest>=7.3.1,<8",
+    "pytest-asyncio>=0.21.0,<0.22",
+]
+
+[tool.uv]
+default-groups = "all"
+
+[tool.uv.build-backend]
+module-root = ""
+source-include = ["aqimon/static/elm.js"]
+
+[build-system]
+requires = ["uv_build>=0.13.4,<0.14.0"]
+build-backend = "uv_build"
 
 [tool.ruff]
 select = ["E", "F", "D"]
