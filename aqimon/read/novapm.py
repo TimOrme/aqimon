@@ -2,6 +2,7 @@
 
 https://www.amazon.com/SDS011-Quality-Detection-Conditioning-Monitor/dp/B07FSDMRR5
 """
+
 import asyncio
 
 from . import AqiRead, ReaderState, ReaderStatus

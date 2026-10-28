@@ -1,4 +1,5 @@
 """Core server module."""
+
 from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles

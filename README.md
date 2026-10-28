@@ -98,7 +98,7 @@ To start developing, you'll need to install the following tools:
 
 - [Python 3.9+](https://www.python.org/) - For API Code
 - [Elm 0.19](https://elm-lang.org/) - For client code
-- [poetry](https://python-poetry.org/) - For python package management
+- [uv](https://docs.astral.sh/uv/) - For python package management
 - [justfile](https://github.com/casey/just) - For builds
 - [elm-format](https://github.com/avh4/elm-format) - For auto-formatting elm code.
 
@@ -116,7 +116,7 @@ just build
 To start the server in develop mode, run:
 
 ```commandline
-poetry run aqimond
+uv run aqimond
 ```
 
 To compile elm changes, run:
@@ -143,7 +143,7 @@ Aqimon ships with a mock reader class that you can use in the event that you don
 development computer.  The mock reader just returns randomized reads.  To use it, you can start the server like:
 
 ```commandline
-AQIMON_READER_TYPE=MOCK poetry run aqimon
+AQIMON_READER_TYPE=MOCK uv run aqimon
 ```
 
 ### Submitting a PR
