@@ -1,4 +1,5 @@
 """Reader module."""
+
 from typing import Protocol, Optional
 from dataclasses import dataclass
 from enum import Enum

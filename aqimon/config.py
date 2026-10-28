@@ -1,4 +1,5 @@
 """Config module."""
+
 import os.path
 from dataclasses import dataclass
 
