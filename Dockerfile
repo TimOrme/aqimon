@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the Elm compiler
-RUN npm install -g elm
+RUN npm install -g elm@0.19.1
 
 WORKDIR /elm
 COPY elm/elm.json ./
@@ -23,8 +23,9 @@ WORKDIR /app
 
 # Copy package metadata and source code
 COPY pyproject.toml .
+COPY README.md .
 COPY aqimon/ ./aqimon/
-COPY --from=elm-builder /frontend/elm.js ./aqimon/static/elm.js
+COPY --from=elm-builder /elm/elm.js ./aqimon/static/elm.js
 
 # Install the package and its dependencies
 RUN pip install --no-cache-dir .
