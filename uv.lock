@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11, <4"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -48,9 +48,8 @@ wheels = [
 
 [[package]]
 name = "aqimon"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
-default-groups = "all"
 dependencies = [
     { name = "databases", extra = ["aiosqlite"] },
     { name = "fastapi" },
