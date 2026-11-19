@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the Elm compiler
-RUN npm install -g elm@0.19.1
+# Installs the community-maintained Elm 0.19.1 binary that includes linux-arm64 support
+RUN npm install -g @lydell/elm@0.19.1-14
 
 WORKDIR /elm
 COPY elm/elm.json ./
