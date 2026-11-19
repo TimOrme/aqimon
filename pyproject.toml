@@ -1,6 +1,6 @@
 [project]
 name = "aqimon"
-version = "0.8.0"
+version = "0.7.1"
 description = "Air Quality Index Monitor"
 authors = [{ name = "Tim Orme" }]
 requires-python = ">=3.11,<4"
